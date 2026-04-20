@@ -32,21 +32,20 @@ class AddTransactionActivity : AppCompatActivity() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         btnSave.setOnClickListener {
-            // Зчитуємо дані з полів
-            val amountText = etAmount.text.toString()
-            val category = etCategory.text.toString()
-            val comment = etComment.text.toString()
+            // Додаємо .trim(), щоб відрізати випадкові пробіли, які можуть блокувати український текст
+            val amountText = etAmount.text.toString().trim()
+            val category = etCategory.text.toString().trim()
+            val comment = etComment.text.toString().trim()
 
-            // Визначаємо тип: якщо вибрана кнопка "Витрата", то expense, інакше income
             val type = if (rbExpense.isChecked) "expense" else "income"
 
-            // Базова перевірка, щоб юзер не ввів порожні дані
             if (amountText.isBlank() || category.isBlank()) {
                 Toast.makeText(this, "Введіть суму та категорію!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val amount = amountText.toDoubleOrNull()
+            // Замінюємо кому на крапку, бо toDoubleOrNull() розуміє тільки крапку!
+            val amount = amountText.replace(",", ".").toDoubleOrNull()
             if (amount == null || amount <= 0) {
                 Toast.makeText(this, "Введіть коректну суму!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -58,36 +57,29 @@ class AddTransactionActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Показуємо завантаження
             progressBar.visibility = View.VISIBLE
             btnSave.isEnabled = false
 
-            // Генеруємо унікальний ID для цієї транзакції
             val transactionId = UUID.randomUUID().toString()
 
-            // Створюємо об'єкт з нашої моделі (модель ми робили в минулому кроці)
             val transaction = Transaction(
                 id = transactionId,
                 type = type,
                 category = category,
                 amount = amount,
-                date = System.currentTimeMillis(), // поточний час
+                date = System.currentTimeMillis(),
                 comment = comment
             )
 
-            // ЗБЕРЕЖЕННЯ В FIREBASE
-            // Шлях: users -> [твій_id] -> transactions -> [id_транзакції]
             db.collection("users").document(currentUser.uid)
                 .collection("transactions").document(transactionId)
                 .set(transaction)
                 .addOnSuccessListener {
-                    // Якщо збережено успішно
                     progressBar.visibility = View.GONE
                     Toast.makeText(this, "Успішно додано!", Toast.LENGTH_SHORT).show()
-                    finish() // Закриваємо цей екран і повертаємось на головний
+                    finish()
                 }
                 .addOnFailureListener { e ->
-                    // Якщо сталася помилка
                     progressBar.visibility = View.GONE
                     btnSave.isEnabled = true
                     Toast.makeText(this, "Помилка: ${e.message}", Toast.LENGTH_LONG).show()

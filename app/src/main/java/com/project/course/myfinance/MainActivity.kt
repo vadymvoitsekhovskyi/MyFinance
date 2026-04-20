@@ -1,8 +1,9 @@
 package com.project.course.myfinance
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import android.widget.ImageView
+import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -11,11 +12,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.project.course.myfinance.models.Transaction
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,7 +35,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Перевірка авторизації
         if (auth.currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -45,44 +50,34 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        // Ініціалізація елементів екрану
         val tvUserEmail = findViewById<TextView>(R.id.tvUserEmail)
-        val btnLogout = findViewById<ImageView>(R.id.btnLogout)
+        // btnLogout видалено!
         val fabAddTransaction = findViewById<FloatingActionButton>(R.id.fabAddTransaction)
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
 
         tvUserEmail.text = auth.currentUser?.email
 
-        // Налаштування списку (RecyclerView)
-        transactionAdapter = TransactionAdapter(emptyList())
+        // Налаштування списку та передача лямбди для обробки кліку
+        transactionAdapter = TransactionAdapter(emptyList()) { clickedTransaction ->
+            showTransactionDetailsBottomSheet(clickedTransaction)
+        }
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = transactionAdapter
-
-        // Кнопки
-        btnLogout.setOnClickListener {
-            auth.signOut()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-        }
 
         fabAddTransaction.setOnClickListener {
             startActivity(Intent(this, AddTransactionActivity::class.java))
         }
 
-        // Завантажуємо дані з Firebase
         loadTransactions()
     }
 
     private fun loadTransactions() {
         val currentUser = auth.currentUser ?: return
 
-        // Ми ставимо SnapshotListener. Це означає, що як тільки в базі щось зміниться
-        // (наприклад, ти додаси транзакцію), цей код автоматично виконається знову
-        // і екран миттєво оновиться!
         db.collection("users").document(currentUser.uid)
             .collection("transactions")
-            .orderBy("date", Query.Direction.DESCENDING) // Сортуємо від найновіших до найстаріших
+            .orderBy("date", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT).show()
@@ -93,15 +88,12 @@ class MainActivity : AppCompatActivity() {
                     val transactionsList = mutableListOf<Transaction>()
                     var totalBalance = 0.0
 
-                    // Перебираємо всі документи, які повернув Firebase
                     for (document in snapshot.documents) {
-                        // Перетворюємо документ з бази в наш клас Transaction
                         val transaction = document.toObject(Transaction::class.java)
 
                         if (transaction != null) {
                             transactionsList.add(transaction)
 
-                            // Рахуємо баланс
                             if (transaction.type == "income") {
                                 totalBalance += transaction.amount
                             } else {
@@ -110,13 +102,61 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                    // Оновлюємо список на екрані
                     transactionAdapter.updateData(transactionsList)
-
-                    // Оновлюємо текст балансу
-                    // Використовуємо String.format, щоб було завжди 2 знаки після коми
                     tvTotalBalance.text = String.format("%.2f ₴", totalBalance)
                 }
             }
+    }
+
+    // --- ДОДАНО ---
+    // Функція для показу модального вікна знизу
+    private fun showTransactionDetailsBottomSheet(transaction: Transaction) {
+        // Створюємо діалог і підключаємо до нього наш новий дизайн
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_transaction, null)
+        bottomSheetDialog.setContentView(view)
+
+        // Знаходимо елементи всередині дизайну діалогу
+        val bsType = view.findViewById<TextView>(R.id.bsType)
+        val bsAmount = view.findViewById<TextView>(R.id.bsAmount)
+        val bsCategoryValue = view.findViewById<TextView>(R.id.bsCategoryValue)
+        val bsDateValue = view.findViewById<TextView>(R.id.bsDateValue)
+        val bsCommentValue = view.findViewById<TextView>(R.id.bsCommentValue)
+        val bsCommentLabel = view.findViewById<TextView>(R.id.bsCommentLabel)
+        val divider3 = view.findViewById<View>(R.id.divider3)
+
+        // Заповнюємо даними
+        bsCategoryValue.text = transaction.category
+
+        // Форматуємо повну дату та час
+        val fullDateFormatter = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("uk", "UA"))
+        fullDateFormatter.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
+        bsDateValue.text = fullDateFormatter.format(Date(transaction.date))
+
+        if (transaction.comment.isNotBlank()) {
+            bsCommentValue.text = transaction.comment
+            bsCommentValue.visibility = View.VISIBLE
+            bsCommentLabel.visibility = View.VISIBLE
+            divider3.visibility = View.VISIBLE
+        } else {
+            bsCommentValue.visibility = View.GONE
+            bsCommentLabel.visibility = View.GONE
+            divider3.visibility = View.GONE
+        }
+
+        if (transaction.type == "income") {
+            bsType.text = "Дохід"
+            bsType.setTextColor(Color.parseColor("#4CAF50"))
+            bsAmount.text = "+ ${transaction.amount} ₴"
+            bsAmount.setTextColor(Color.parseColor("#4CAF50"))
+        } else {
+            bsType.text = "Витрата"
+            bsType.setTextColor(Color.parseColor("#F44336"))
+            bsAmount.text = "- ${transaction.amount} ₴"
+            bsAmount.setTextColor(Color.parseColor("#000000")) // Можемо зробити суму чорною для контрасту у вікні
+        }
+
+        // Показуємо діалог
+        bottomSheetDialog.show()
     }
 }
