@@ -41,7 +41,7 @@
         android:minHeight="48dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/etEmail" /> <!-- Виправлено прив'язку до etEmail -->
+        app:layout_constraintTop_toBottomOf="@+id/etEmail" />
 
     <CheckBox
         android:id="@+id/cbShowPassword"
@@ -50,6 +50,18 @@
         android:layout_marginTop="8dp"
         android:text="Показати пароль"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/etPassword" />
+
+    <!-- Кнопка Забули пароль -->
+    <TextView
+        android:id="@+id/tvForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Забули пароль?"
+        android:textColor="#2196F3"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/etPassword" />
 
     <Button

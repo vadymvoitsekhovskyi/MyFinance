@@ -1,8 +1,10 @@
 package com.project.course.myfinance
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
@@ -39,7 +41,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topPanel: LinearLayout
     private lateinit var selectionPanel: LinearLayout
     private lateinit var tvSelectedCount: TextView
-    private lateinit var tvProfileLetter: TextView // Додано для іконки
+    private lateinit var tvProfileLetter: TextView
+    private lateinit var ivProfile: ImageView // Для картинки
 
     private var currentTransactions: List<Transaction> = emptyList()
 
@@ -68,18 +71,17 @@ class MainActivity : AppCompatActivity() {
         selectionPanel = findViewById(R.id.selectionPanel)
         tvSelectedCount = findViewById(R.id.tvSelectedCount)
         tvProfileLetter = findViewById(R.id.tvProfileLetter)
+        ivProfile = findViewById(R.id.ivProfile)
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
 
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
 
-        // Перехід у профіль
         cvProfile.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
 
-        // Налаштування адаптера
         transactionAdapter = TransactionAdapter(
             emptyList(),
             onItemClick = { transaction ->
@@ -116,7 +118,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Оновлюємо іконку при поверненні на екран (якщо ім'я змінилося)
         if (auth.currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -127,10 +128,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateProfileIcon() {
         val user = auth.currentUser ?: return
+
+        // Спочатку виводимо літеру
         val nameToUse = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.email ?: "U"
         if (nameToUse.isNotEmpty()) {
             tvProfileLetter.text = nameToUse.first().uppercase()
         }
+
+        // Завантажуємо аватарку з Firestore (Base64)
+        db.collection("users").document(user.uid).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.contains("avatarBase64")) {
+                    val base64String = document.getString("avatarBase64")
+                    if (!base64String.isNullOrEmpty()) {
+                        try {
+                            val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+                            val decodedBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                            ivProfile.setImageBitmap(decodedBitmap)
+                            ivProfile.visibility = View.VISIBLE
+                            tvProfileLetter.visibility = View.GONE
+                        } catch (e: Exception) {
+                            // Ігноруємо помилки декодування, залишиться літера
+                        }
+                    } else {
+                        ivProfile.visibility = View.GONE
+                        tvProfileLetter.visibility = View.VISIBLE
+                    }
+                } else {
+                    ivProfile.visibility = View.GONE
+                    tvProfileLetter.visibility = View.VISIBLE
+                }
+            }
     }
 
     private fun toggleSelection(id: String) {

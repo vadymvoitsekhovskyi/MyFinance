@@ -10,14 +10,17 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import com.google.firebase.auth.FirebaseAuth
 import com.project.course.myfinance.auth.AuthState
 import com.project.course.myfinance.auth.AuthViewModel
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var viewModel: AuthViewModel
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +33,7 @@ class LoginActivity : AppCompatActivity() {
         val cbShowPassword = findViewById<CheckBox>(R.id.cbShowPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvGoToRegister = findViewById<TextView>(R.id.tvGoToRegister)
+        val tvForgotPassword = findViewById<TextView>(R.id.tvForgotPassword)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
@@ -38,7 +42,6 @@ class LoginActivity : AppCompatActivity() {
             etPassword.setSelection(etPassword.text.length)
         }
 
-        // Спостерігаємо за змінами стану з ViewModel
         viewModel.authState.observe(this) { state ->
             when (state) {
                 is AuthState.Loading -> {
@@ -47,9 +50,8 @@ class LoginActivity : AppCompatActivity() {
                 }
                 is AuthState.Success -> {
                     progressBar.visibility = View.GONE
-                    // Якщо успішно - йдемо на головний екран
                     startActivity(Intent(this, MainActivity::class.java))
-                    finish() // Закриваємо екран логіну, щоб не можна було повернутись кнопкою "Назад"
+                    finish()
                 }
                 is AuthState.Error -> {
                     progressBar.visibility = View.GONE
@@ -66,12 +68,51 @@ class LoginActivity : AppCompatActivity() {
         btnLogin.setOnClickListener {
             val email = etEmail.text.toString()
             val password = etPassword.text.toString()
-
             viewModel.login(email, password)
         }
 
         tvGoToRegister.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+
+        // Обробка кліку "Забули пароль?"
+        tvForgotPassword.setOnClickListener {
+            showForgotPasswordDialog(etEmail.text.toString())
+        }
+    }
+
+    private fun showForgotPasswordDialog(prefilledEmail: String) {
+        val input = EditText(this)
+        input.hint = "Введіть ваш Email"
+        input.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        if (prefilledEmail.isNotEmpty()) {
+            input.setText(prefilledEmail)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Відновлення пароля")
+            .setMessage("Введіть email, на який ми надішлемо посилання для створення нового пароля.")
+            .setView(input)
+            .setPositiveButton("Надіслати") { _, _ ->
+                val email = input.text.toString().trim()
+                if (email.isNotEmpty()) {
+                    sendPasswordResetEmail(email)
+                } else {
+                    Toast.makeText(this, "Email не може бути порожнім", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Скасувати", null)
+            .show()
+    }
+
+    private fun sendPasswordResetEmail(email: String) {
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Лист для відновлення надіслано на $email. Перевірте пошту.", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                }
+            }
     }
 }

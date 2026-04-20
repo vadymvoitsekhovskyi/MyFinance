@@ -1,8 +1,12 @@
 package com.project.course.myfinance
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.util.Base64
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -11,12 +15,17 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import java.io.ByteArrayOutputStream
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -24,9 +33,15 @@ class ProfileActivity : AppCompatActivity() {
     private val db = FirebaseFirestore.getInstance()
 
     private lateinit var tvBigProfileLetter: TextView
+    private lateinit var ivBigProfile: ImageView
     private lateinit var tvEmailDisplay: TextView
     private lateinit var tvNameDisplay: TextView
     private lateinit var progressBar: ProgressBar
+
+    // Лаунчер для вибору фотографії
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { saveAvatarToFirestoreAsBase64(it) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,9 +49,11 @@ class ProfileActivity : AppCompatActivity() {
 
         val btnBack = findViewById<ImageView>(R.id.btnBack)
         tvBigProfileLetter = findViewById(R.id.tvBigProfileLetter)
+        ivBigProfile = findViewById(R.id.ivBigProfile)
         tvEmailDisplay = findViewById(R.id.tvEmailDisplay)
         tvNameDisplay = findViewById(R.id.tvNameDisplay)
         progressBar = findViewById(R.id.progressBar)
+        val cvBigProfile = findViewById<CardView>(R.id.cvBigProfile)
 
         val btnChangeName = findViewById<Button>(R.id.btnChangeName)
         val btnChangeEmail = findViewById<Button>(R.id.btnChangeEmail)
@@ -47,6 +64,10 @@ class ProfileActivity : AppCompatActivity() {
         btnBack.setOnClickListener { finish() }
 
         updateUI()
+        loadAvatarFromFirestore()
+
+        // Клік по аватарці
+        cvBigProfile.setOnClickListener { showAvatarOptionsDialog() }
 
         btnChangeName.setOnClickListener { showChangeNameDialog() }
         btnChangeEmail.setOnClickListener { showChangeEmailDialog() }
@@ -57,7 +78,6 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val user = auth.currentUser ?: return
-
         tvEmailDisplay.text = user.email
 
         val name = user.displayName
@@ -69,6 +89,122 @@ class ProfileActivity : AppCompatActivity() {
             tvBigProfileLetter.text = user.email?.first()?.uppercase() ?: "U"
         }
     }
+
+    private fun showAvatarOptionsDialog() {
+        // Перевіряємо, чи встановлена та видима аватарка в даний момент
+        val hasPhoto = ivBigProfile.visibility == View.VISIBLE
+
+        // Формуємо список опцій залежно від наявності фото
+        val options = if (hasPhoto) {
+            arrayOf("Замінити", "Видалити")
+        } else {
+            arrayOf("Встановити")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Фото профілю")
+            .setItems(options) { _, which ->
+                if (hasPhoto) {
+                    when (which) {
+                        0 -> pickImageLauncher.launch("image/*") // Замінити
+                        1 -> deleteAvatar() // Видалити
+                    }
+                } else {
+                    when (which) {
+                        0 -> pickImageLauncher.launch("image/*") // Встановити
+                    }
+                }
+            }
+            .show()
+    }
+
+    // Стискаємо і зберігаємо картинку як текст
+    private fun saveAvatarToFirestoreAsBase64(imageUri: Uri) {
+        setLoading(true)
+        try {
+            val inputStream = contentResolver.openInputStream(imageUri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+
+            // Зменшуємо розмір, щоб зберегти місце в базі
+            val ratio: Float = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
+            val width = 300
+            val height = (width / ratio).toInt()
+            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false)
+
+            val outputStream = ByteArrayOutputStream()
+            // Якість 60%, щоб текст був не надто довгим
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+            val byteArray = outputStream.toByteArray()
+            val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
+
+            val user = auth.currentUser ?: return
+
+            // Зберігаємо в документ користувача
+            val data = hashMapOf("avatarBase64" to base64String)
+            db.collection("users").document(user.uid)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener {
+                    setLoading(false)
+                    Toast.makeText(this, "Фото оновлено!", Toast.LENGTH_SHORT).show()
+                    loadAvatarFromFirestore() // Перезавантажуємо
+                }
+                .addOnFailureListener {
+                    setLoading(false)
+                    Toast.makeText(this, "Помилка збереження", Toast.LENGTH_SHORT).show()
+                }
+
+        } catch (e: Exception) {
+            setLoading(false)
+            Toast.makeText(this, "Помилка обробки фото", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun loadAvatarFromFirestore() {
+        val user = auth.currentUser ?: return
+        db.collection("users").document(user.uid).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.contains("avatarBase64")) {
+                    val base64String = document.getString("avatarBase64")
+                    if (!base64String.isNullOrEmpty()) {
+                        try {
+                            val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+                            val decodedBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                            ivBigProfile.setImageBitmap(decodedBitmap)
+                            ivBigProfile.visibility = View.VISIBLE
+                            tvBigProfileLetter.visibility = View.GONE
+                        } catch (e: Exception) {
+                            // Якщо щось пішло не так при декодуванні
+                        }
+                    } else {
+                        ivBigProfile.visibility = View.GONE
+                        tvBigProfileLetter.visibility = View.VISIBLE
+                    }
+                }
+            }
+    }
+
+    private fun deleteAvatar() {
+        val user = auth.currentUser ?: return
+        setLoading(true)
+
+        val updates = hashMapOf<String, Any>(
+            "avatarBase64" to FieldValue.delete() // Видаляємо поле з бази
+        )
+
+        db.collection("users").document(user.uid)
+            .update(updates)
+            .addOnSuccessListener {
+                setLoading(false)
+                Toast.makeText(this, "Фото видалено", Toast.LENGTH_SHORT).show()
+                ivBigProfile.visibility = View.GONE
+                tvBigProfileLetter.visibility = View.VISIBLE
+            }
+            .addOnFailureListener {
+                setLoading(false)
+            }
+    }
+
+    // --- Далі старі функції ---
 
     private fun showChangeNameDialog() {
         val input = EditText(this)
@@ -113,7 +249,7 @@ class ProfileActivity : AppCompatActivity() {
         layout.addView(emailInput)
 
         val passInput = EditText(this)
-        passInput.hint = "Поточний пароль (для підтвердження)"
+        passInput.hint = "Поточний пароль"
         passInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(passInput)
 
@@ -129,7 +265,6 @@ class ProfileActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setTitle("Змінити Email")
             .setView(layout)
-            // Передаємо null замість listener, щоб модалка не закривалась автоматично
             .setPositiveButton("Зберегти", null)
             .setNegativeButton("Скасувати", null)
             .create()
@@ -153,9 +288,7 @@ class ProfileActivity : AppCompatActivity() {
                                 Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                             }
                         }
-                    }, {
-                        // Якщо пароль невірний — модалка не закриється
-                    })
+                    }, {})
                 } else {
                     Toast.makeText(this, "Заповніть всі поля", Toast.LENGTH_SHORT).show()
                 }
@@ -179,7 +312,6 @@ class ProfileActivity : AppCompatActivity() {
         newPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(newPassInput)
 
-        // Додали поле підтвердження
         val confirmPassInput = EditText(this)
         confirmPassInput.hint = "Підтвердіть новий пароль"
         confirmPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -202,7 +334,7 @@ class ProfileActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setTitle("Змінити пароль")
             .setView(layout)
-            .setPositiveButton("Зберегти", null) // Щоб не закривалось автоматично
+            .setPositiveButton("Зберегти", null)
             .setNegativeButton("Скасувати", null)
             .create()
 
@@ -217,14 +349,11 @@ class ProfileActivity : AppCompatActivity() {
                     Toast.makeText(this, "Заповніть всі поля", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-
                 if (newPass.length < 6) {
                     Toast.makeText(this, "Новий пароль має бути від 6 символів", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-
                 if (newPass != confirmPass) {
-                    // Показуємо що паролі не співпадають, не закриваємо модалку!
                     Toast.makeText(this, "Паролі не співпадають!", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
@@ -241,9 +370,7 @@ class ProfileActivity : AppCompatActivity() {
                             Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                         }
                     }
-                }, {
-                    // reauth failed: старий пароль невірний, модалка не закриється
-                })
+                }, {})
             }
         }
         dialog.show()
@@ -296,9 +423,7 @@ class ProfileActivity : AppCompatActivity() {
                     reAuthenticateAndExecute(password, { user ->
                         deleteUserDataAndAccount()
                         dialog.dismiss()
-                    }, {
-                        // залишаємо відкритою
-                    })
+                    }, {})
                 } else {
                     Toast.makeText(this, "Пароль обов'язковий", Toast.LENGTH_SHORT).show()
                 }
@@ -307,7 +432,6 @@ class ProfileActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // Додано callback onFailure, щоб ми могли не закривати модалку, коли пароль хибний
     private fun reAuthenticateAndExecute(
         password: String,
         onSuccess: (com.google.firebase.auth.FirebaseUser) -> Unit,
@@ -340,6 +464,9 @@ class ProfileActivity : AppCompatActivity() {
                     batch.delete(doc.reference)
                 }
 
+                // Видаляємо також і основний документ користувача (де зберігається аватарка)
+                batch.delete(db.collection("users").document(uid))
+
                 batch.commit().addOnCompleteListener {
                     user.delete().addOnCompleteListener { task ->
                         setLoading(false)
@@ -354,7 +481,7 @@ class ProfileActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 setLoading(false)
-                Toast.makeText(this, "Помилка доступу до бази даних: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Помилка доступу: ${e.message}", Toast.LENGTH_LONG).show()
             }
     }
 

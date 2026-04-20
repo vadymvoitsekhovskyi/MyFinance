@@ -7,7 +7,6 @@
     android:background="#F8F9FA"
     tools:context=".ProfileActivity">
 
-    <!-- Верхня панель з кнопкою назад -->
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -33,19 +32,22 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Велика кругла іконка профілю -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cvBigProfile"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
         android:layout_marginTop="32dp"
-        app:cardCornerRadius="50dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?android:attr/selectableItemBackground"
+        app:cardCornerRadius="60dp"
         app:cardBackgroundColor="#2196F3"
         app:cardElevation="4dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Літера (якщо немає фото) -->
         <TextView
             android:id="@+id/tvBigProfileLetter"
             android:layout_width="match_parent"
@@ -55,7 +57,28 @@
             android:textColor="#FFFFFF"
             android:textSize="48sp"
             android:textStyle="bold" />
+
+        <!-- ImageView для Аватарки -->
+        <ImageView
+            android:id="@+id/ivBigProfile"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
     </androidx.cardview.widget.CardView>
+
+    <!-- Іконка редагування аватарки -->
+    <ImageView
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_edit"
+        app:tint="#4CAF50"
+        android:background="@drawable/rounded_bottom_sheet"
+        android:padding="6dp"
+        android:elevation="6dp"
+        app:layout_constraintBottom_toBottomOf="@id/cvBigProfile"
+        app:layout_constraintEnd_toEndOf="@id/cvBigProfile" />
 
     <TextView
         android:id="@+id/tvEmailDisplay"
@@ -81,7 +104,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Меню налаштувань -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
