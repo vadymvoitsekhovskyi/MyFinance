@@ -23,6 +23,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.project.course.myfinance.models.Transaction
 import java.text.SimpleDateFormat
@@ -42,9 +43,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var selectionPanel: LinearLayout
     private lateinit var tvSelectedCount: TextView
     private lateinit var tvProfileLetter: TextView
-    private lateinit var ivProfile: ImageView // Для картинки
+    private lateinit var ivProfile: ImageView
 
     private var currentTransactions: List<Transaction> = emptyList()
+
+    // Змінні для пагінації
+    private var currentLimit: Long = 10L
+    private var snapshotListener: ListenerRegistration? = null
+    private var balanceListener: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,6 +105,18 @@ class MainActivity : AppCompatActivity() {
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = transactionAdapter
 
+        // Слухач для пагінації (завантаження додаткових транзакцій при скролі вниз)
+        rvTransactions.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                // Якщо неможливо скролити вниз (дійшли до кінця)
+                if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    currentLimit += 10L // Збільшуємо ліміт на 10 сторінок
+                    loadTransactions() // Завантажуємо оновлений список
+                }
+            }
+        })
+
         fabAddTransaction.setOnClickListener {
             startActivity(Intent(this, AddTransactionActivity::class.java))
         }
@@ -112,7 +130,8 @@ class MainActivity : AppCompatActivity() {
             showDeleteConfirmationDialog(transactionAdapter.selectedIds.toList())
         }
 
-        loadTransactions()
+        loadTotalBalance() // Спочатку завантажуємо загальний баланс з усієї бази
+        loadTransactions() // Завантажуємо перші 10 транзакцій
         updateProfileIcon()
     }
 
@@ -126,16 +145,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        snapshotListener?.remove()
+        balanceListener?.remove()
+    }
+
     private fun updateProfileIcon() {
         val user = auth.currentUser ?: return
 
-        // Спочатку виводимо літеру
         val nameToUse = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.email ?: "U"
         if (nameToUse.isNotEmpty()) {
             tvProfileLetter.text = nameToUse.first().uppercase()
         }
 
-        // Завантажуємо аватарку з Firestore (Base64)
         db.collection("users").document(user.uid).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.contains("avatarBase64")) {
@@ -148,7 +171,7 @@ class MainActivity : AppCompatActivity() {
                             ivProfile.visibility = View.VISIBLE
                             tvProfileLetter.visibility = View.GONE
                         } catch (e: Exception) {
-                            // Ігноруємо помилки декодування, залишиться літера
+                            // Ігноруємо помилки декодування
                         }
                     } else {
                         ivProfile.visibility = View.GONE
@@ -183,12 +206,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Окремий запит для правильного відображення загального балансу (всі транзакції)
+    private fun loadTotalBalance() {
+        val currentUser = auth.currentUser ?: return
+
+        balanceListener?.remove()
+        balanceListener = db.collection("users").document(currentUser.uid)
+            .collection("transactions")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                var totalBalance = 0.0
+                for (doc in snapshot.documents) {
+                    val type = doc.getString("type") ?: "expense"
+                    val amount = doc.getDouble("amount") ?: 0.0
+                    if (type == "income") totalBalance += amount else totalBalance -= amount
+                }
+                tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", totalBalance)
+            }
+    }
+
+    // Запит для відображення списку з ПАГІНАЦІЄЮ (limit)
     private fun loadTransactions() {
         val currentUser = auth.currentUser ?: return
 
-        db.collection("users").document(currentUser.uid)
+        snapshotListener?.remove() // Видаляємо попередній слухач перед встановленням нового з більшим лімітом
+
+        snapshotListener = db.collection("users").document(currentUser.uid)
             .collection("transactions")
             .orderBy("date", Query.Direction.DESCENDING)
+            .limit(currentLimit) // Встановлюємо пагінацію (10, 20, 30...)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT).show()
@@ -197,23 +244,16 @@ class MainActivity : AppCompatActivity() {
 
                 if (snapshot != null) {
                     val transactionsList = mutableListOf<Transaction>()
-                    var totalBalance = 0.0
 
                     for (document in snapshot.documents) {
                         val transaction = document.toObject(Transaction::class.java)
                         if (transaction != null) {
                             transactionsList.add(transaction)
-                            if (transaction.type == "income") {
-                                totalBalance += transaction.amount
-                            } else {
-                                totalBalance -= transaction.amount
-                            }
                         }
                     }
 
                     currentTransactions = transactionsList
                     transactionAdapter.updateData(transactionsList)
-                    tvTotalBalance.text = String.format("%.2f ₴", totalBalance)
 
                     val validSelectedIds = transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
                     transactionAdapter.selectedIds.clear()
@@ -259,12 +299,12 @@ class MainActivity : AppCompatActivity() {
         if (transaction.type == "income") {
             bsType.text = "Дохід"
             bsType.setTextColor(Color.parseColor("#4CAF50"))
-            bsAmount.text = "+ ${transaction.amount} ₴"
+            bsAmount.text = String.format(Locale.US, "+ %.2f ₴", transaction.amount)
             bsAmount.setTextColor(Color.parseColor("#4CAF50"))
         } else {
             bsType.text = "Витрата"
             bsType.setTextColor(Color.parseColor("#F44336"))
-            bsAmount.text = "- ${transaction.amount} ₴"
+            bsAmount.text = String.format(Locale.US, "- %.2f ₴", transaction.amount)
             bsAmount.setTextColor(Color.parseColor("#000000"))
         }
 
