@@ -7,12 +7,16 @@
     android:background="#F8F9FA"
     tools:context=".ProfileActivity">
 
+    <!-- Верхня панель -->
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:minHeight="?attr/actionBarSize"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingHorizontal="16dp"
+        android:gravity="center_vertical"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -26,18 +30,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_gravity="center_vertical"
             android:text="Профіль"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- ... (Частина з аватаркою залишається без змін) ... -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cvBigProfile"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="16dp"
         android:clickable="true"
         android:focusable="true"
         android:foreground="?android:attr/selectableItemBackground"
@@ -101,7 +103,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Додано ScrollView, щоб кнопки помістились на невеликих екранах -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -113,7 +114,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="24dp">
 
             <Button
                 android:id="@+id/btnChangeName"
@@ -121,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Змінити ім'я"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnChangeEmail"
@@ -129,7 +131,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Змінити Email"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnChangePassword"
@@ -137,13 +139,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Змінити Пароль"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="12dp"/>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#E0E0E0"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="12dp"/>
 
             <!-- НОВІ КНОПКИ: ЕКСПОРТ ТА ІМПОРТ -->
             <Button
@@ -151,38 +153,39 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Експорт даних (CSV / JSON)"
+                android:text="Експорт (CSV / JSON)"
                 app:icon="@android:drawable/ic_menu_save"
                 app:strokeColor="#4CAF50"
                 android:textColor="#4CAF50"
                 app:iconTint="#4CAF50"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnImportData"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Імпорт даних (CSV / JSON)"
+                android:text="Імпорт (CSV / JSON)"
                 app:icon="@android:drawable/ic_menu_upload"
                 app:strokeColor="#FF9800"
                 android:textColor="#FF9800"
                 app:iconTint="#FF9800"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="12dp"/>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#E0E0E0"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="16dp"/>
 
+            <!-- Заокруглені кнопки виходу та видалення -->
             <Button
                 android:id="@+id/btnLogout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Вийти з акаунта"
                 android:backgroundTint="#757575"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnDeleteAccount"
@@ -191,7 +194,7 @@
                 android:text="Видалити акаунт"
                 android:textColor="#FFFFFF"
                 android:backgroundTint="#F44336"
-                android:layout_marginBottom="32dp"/>
+                android:layout_marginBottom="16dp"/>
 
         </LinearLayout>
     </ScrollView>

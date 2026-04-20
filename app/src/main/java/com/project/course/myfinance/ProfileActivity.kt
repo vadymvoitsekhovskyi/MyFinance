@@ -214,13 +214,11 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    // Допоміжний метод: Створення CSV з об'єктів
     private fun buildCsvString(transactions: List<Transaction>): String {
         val builder = java.lang.StringBuilder()
-        builder.append("id,type,category,amount,date,comment\n") // Заголовок
+        builder.append("id,type,category,amount,date,comment\n")
 
         transactions.forEach { t ->
-            // Екрануємо лапки, якщо вони є у тексті
             val safeCategory = t.category.replace("\"", "\"\"").let { "\"$it\"" }
             val safeComment = t.comment.replace("\"", "\"\"").let { "\"$it\"" }
 
@@ -229,16 +227,14 @@ class ProfileActivity : AppCompatActivity() {
         return builder.toString()
     }
 
-    // Допоміжний метод: Парсинг CSV в об'єкти
     private fun parseCsvString(csv: String): List<Transaction> {
         val list = mutableListOf<Transaction>()
         val lines = csv.lines()
         if (lines.size <= 1) return list
 
-        // Регулярний вираз для розбиття по комі, ігноруючи коми всередині лапок
         val csvRegex = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
 
-        for (i in 1 until lines.size) { // Починаємо з 1, пропускаючи заголовок
+        for (i in 1 until lines.size) {
             val line = lines[i].trim()
             if (line.isEmpty()) continue
 
@@ -262,7 +258,7 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // СТАРИЙ КОД (ЗАЛИШИВСЯ БЕЗ ЗМІН ДЛЯ СТАБІЛЬНОСТІ)
+    // ЛОГІКА ПРОФІЛЮ
     // ==========================================
 
     private fun updateUI() {
@@ -306,13 +302,14 @@ class ProfileActivity : AppCompatActivity() {
             val inputStream = contentResolver.openInputStream(imageUri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
 
+            // Збільшуємо ширину та якість фото для кращого відображення
             val ratio: Float = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
-            val width = 300
+            val width = 800 // Було 300
             val height = (width / ratio).toInt()
-            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, false)
+            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
 
             val outputStream = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream) // Було 60
             val byteArray = outputStream.toByteArray()
             val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
 
@@ -379,13 +376,19 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeNameDialog() {
+        // Обертаємо поле вводу у LinearLayout з відступами (padding)
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(50, 40, 50, 10)
+
         val input = EditText(this)
         input.hint = "Нове ім'я"
         input.setText(auth.currentUser?.displayName)
+        layout.addView(input)
 
         AlertDialog.Builder(this)
             .setTitle("Змінити ім'я")
-            .setView(input)
+            .setView(layout)
             .setPositiveButton("Зберегти") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {

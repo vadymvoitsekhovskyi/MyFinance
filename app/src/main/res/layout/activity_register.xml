@@ -81,7 +81,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Вже є акаунт? Увійти"
-        android:textColor="#0000FF"
+        android:textColor="@color/primary_green"
         android:padding="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

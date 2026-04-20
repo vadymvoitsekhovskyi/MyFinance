@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -82,6 +83,11 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun showForgotPasswordDialog(prefilledEmail: String) {
+        // Створюємо контейнер з відступами, щоб поле вводу не торкалося країв
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(50, 40, 50, 10)
+
         val input = EditText(this)
         input.hint = "Введіть ваш Email"
         input.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
@@ -89,10 +95,12 @@ class LoginActivity : AppCompatActivity() {
             input.setText(prefilledEmail)
         }
 
+        layout.addView(input)
+
         AlertDialog.Builder(this)
             .setTitle("Відновлення пароля")
             .setMessage("Введіть email, на який ми надішлемо посилання для створення нового пароля.")
-            .setView(input)
+            .setView(layout) // Передаємо layout з відступами
             .setPositiveButton("Надіслати") { _, _ ->
                 val email = input.text.toString().trim()
                 if (email.isNotEmpty()) {
