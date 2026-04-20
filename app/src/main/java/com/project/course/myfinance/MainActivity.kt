@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -38,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topPanel: LinearLayout
     private lateinit var selectionPanel: LinearLayout
     private lateinit var tvSelectedCount: TextView
+    private lateinit var tvProfileLetter: TextView // Додано для іконки
 
     private var currentTransactions: List<Transaction> = emptyList()
 
@@ -59,26 +61,29 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val tvUserEmail = findViewById<TextView>(R.id.tvUserEmail)
         val fabAddTransaction = findViewById<FloatingActionButton>(R.id.fabAddTransaction)
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
         topPanel = findViewById(R.id.topPanel)
         selectionPanel = findViewById(R.id.selectionPanel)
         tvSelectedCount = findViewById(R.id.tvSelectedCount)
+        tvProfileLetter = findViewById(R.id.tvProfileLetter)
+        val cvProfile = findViewById<CardView>(R.id.cvProfile)
 
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
 
-        tvUserEmail.text = auth.currentUser?.email
+        // Перехід у профіль
+        cvProfile.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
 
-        // Налаштування адаптера з двома обробниками кліків
+        // Налаштування адаптера
         transactionAdapter = TransactionAdapter(
             emptyList(),
             onItemClick = { transaction ->
                 if (transactionAdapter.selectedIds.isNotEmpty()) {
-                    // Якщо ми в режимі виділення, клік також виділяє/знімає виділення
                     toggleSelection(transaction.id)
                 } else {
                     showTransactionDetailsBottomSheet(transaction)
@@ -96,21 +101,36 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, AddTransactionActivity::class.java))
         }
 
-        // Обробники кнопок панелі виділення
-        btnCloseSelection.setOnClickListener {
-            clearSelection()
-        }
-
+        btnCloseSelection.setOnClickListener { clearSelection() }
         btnSelectAll.setOnClickListener {
             transactionAdapter.selectAll()
             updateSelectionUI()
         }
-
         btnDeleteSelected.setOnClickListener {
             showDeleteConfirmationDialog(transactionAdapter.selectedIds.toList())
         }
 
         loadTransactions()
+        updateProfileIcon()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Оновлюємо іконку при поверненні на екран (якщо ім'я змінилося)
+        if (auth.currentUser == null) {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        } else {
+            updateProfileIcon()
+        }
+    }
+
+    private fun updateProfileIcon() {
+        val user = auth.currentUser ?: return
+        val nameToUse = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.email ?: "U"
+        if (nameToUse.isNotEmpty()) {
+            tvProfileLetter.text = nameToUse.first().uppercase()
+        }
     }
 
     private fun toggleSelection(id: String) {
@@ -167,7 +187,6 @@ class MainActivity : AppCompatActivity() {
                     transactionAdapter.updateData(transactionsList)
                     tvTotalBalance.text = String.format("%.2f ₴", totalBalance)
 
-                    // Оновлюємо UI виділення, якщо якісь транзакції були видалені через інший пристрій
                     val validSelectedIds = transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
                     transactionAdapter.selectedIds.clear()
                     transactionAdapter.selectedIds.addAll(validSelectedIds)

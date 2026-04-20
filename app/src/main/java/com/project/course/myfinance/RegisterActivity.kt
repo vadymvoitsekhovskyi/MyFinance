@@ -24,10 +24,18 @@ class RegisterActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this)[AuthViewModel::class.java]
 
         val etEmail = findViewById<EditText>(R.id.etEmail)
+        val etName = findViewById<EditText>(R.id.etName)
         val etPassword = findViewById<EditText>(R.id.etPassword)
+        val cbShowPassword = findViewById<android.widget.CheckBox>(R.id.cbShowPassword)
         val btnRegister = findViewById<Button>(R.id.btnRegister)
         val tvGoToLogin = findViewById<TextView>(R.id.tvGoToLogin)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+
+        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
+            val type = if (isChecked) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            etPassword.inputType = type
+            etPassword.setSelection(etPassword.text.length)
+        }
 
         viewModel.authState.observe(this) { state ->
             when (state) {
@@ -58,7 +66,8 @@ class RegisterActivity : AppCompatActivity() {
         btnRegister.setOnClickListener {
             val email = etEmail.text.toString()
             val password = etPassword.text.toString()
-            viewModel.register(email, password)
+            val name = etName.text.toString().trim()
+            viewModel.register(email, password, name)
         }
 
         tvGoToLogin.setOnClickListener {

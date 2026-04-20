@@ -17,14 +17,24 @@ class AuthRepository {
         return auth.currentUser
     }
 
-    // Реєстрація (використовуємо suspend, щоб викликати з корутин без колбеків)
-    suspend fun register(email: String, password: String): FirebaseUser? {
+    // Реєстрація (залишаємо name)
+    suspend fun register(email: String, password: String, name: String = ""): FirebaseUser? {
         // .await() працює завдяки бібліотеці kotlinx-coroutines-play-services
         val result = auth.createUserWithEmailAndPassword(email, password).await()
-        return result.user
+        val user = result.user
+
+        // Встановлюємо ім'я одразу після створення, якщо воно вказано
+        if (user != null && name.isNotBlank()) {
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+                .build()
+            user.updateProfile(profileUpdates).await()
+        }
+
+        return user
     }
 
-    // Авторизація
+    // Авторизація (прибрали name)
     suspend fun login(email: String, password: String): FirebaseUser? {
         val result = auth.signInWithEmailAndPassword(email, password).await()
         return result.user

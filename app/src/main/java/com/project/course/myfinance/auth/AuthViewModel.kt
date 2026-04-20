@@ -26,7 +26,8 @@ class AuthViewModel : ViewModel() {
     private val _authState = MutableLiveData<AuthState>(AuthState.Idle)
     val authState: LiveData<AuthState> = _authState
 
-    fun register(email: String, password: String) {
+    // В реєстрації залишаємо поле name
+    fun register(email: String, password: String, name: String = "") {
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Заповніть всі поля")
             return
@@ -41,7 +42,7 @@ class AuthViewModel : ViewModel() {
         // Запускаємо фонову задачу (корутину)
         viewModelScope.launch {
             try {
-                repository.register(email, password)
+                repository.register(email, password, name)
                 _authState.value = AuthState.Success
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Помилка реєстрації")
@@ -49,6 +50,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    // У вході прибираємо name
     fun login(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Заповніть всі поля")

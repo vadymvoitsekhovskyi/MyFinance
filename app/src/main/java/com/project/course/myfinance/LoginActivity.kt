@@ -2,8 +2,10 @@ package com.project.course.myfinance
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -25,9 +27,16 @@ class LoginActivity : AppCompatActivity() {
 
         val etEmail = findViewById<EditText>(R.id.etEmail)
         val etPassword = findViewById<EditText>(R.id.etPassword)
+        val cbShowPassword = findViewById<CheckBox>(R.id.cbShowPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvGoToRegister = findViewById<TextView>(R.id.tvGoToRegister)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+
+        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
+            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            etPassword.inputType = type
+            etPassword.setSelection(etPassword.text.length)
+        }
 
         // Спостерігаємо за змінами стану з ViewModel
         viewModel.authState.observe(this) { state ->
@@ -54,10 +63,10 @@ class LoginActivity : AppCompatActivity() {
             }
         }
 
-        // Кліки по кнопках
         btnLogin.setOnClickListener {
             val email = etEmail.text.toString()
             val password = etPassword.text.toString()
+
             viewModel.login(email, password)
         }
 
