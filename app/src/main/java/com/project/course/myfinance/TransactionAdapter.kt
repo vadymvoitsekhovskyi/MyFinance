@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import com.project.course.myfinance.models.Transaction
 import java.text.SimpleDateFormat
@@ -12,11 +13,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-// Додаємо onClickListener у конструктор адаптера
 class TransactionAdapter(
     private var transactions: List<Transaction>,
-    private val onItemClick: (Transaction) -> Unit // Лямбда-функція для обробки кліку
+    private val onItemClick: (Transaction) -> Unit,
+    private val onItemLongClick: (Transaction) -> Unit // Додали обробник довгого натискання
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
+
+    val selectedIds = mutableSetOf<String>() // Зберігаємо ID виділених транзакцій
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvDateHeader: TextView = itemView.findViewById(R.id.tvDateHeader)
@@ -24,6 +27,7 @@ class TransactionAdapter(
         val tvComment: TextView = itemView.findViewById(R.id.tvComment)
         val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
+        val cardView: CardView = tvCategory.parent.parent as CardView // Отримуємо CardView для зміни фону
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
@@ -61,6 +65,7 @@ class TransactionAdapter(
             holder.tvAmount.setTextColor(Color.parseColor("#F44336"))
         }
 
+        // Логіка заголовків дат
         if (position == 0) {
             holder.tvDateHeader.visibility = View.VISIBLE
             holder.tvDateHeader.text = currentDateStr
@@ -76,10 +81,21 @@ class TransactionAdapter(
             }
         }
 
-        // --- ДОДАНО ---
-        // Вішаємо слухач кліку на весь елемент itemView
+        // Відображення виділеного стану
+        if (selectedIds.contains(transaction.id)) {
+            holder.cardView.setCardBackgroundColor(Color.parseColor("#E3F2FD")) // Світло-синій фон
+        } else {
+            holder.cardView.setCardBackgroundColor(Color.WHITE) // Звичайний фон
+        }
+
+        // Кліки
         holder.itemView.setOnClickListener {
-            onItemClick(transaction) // Викликаємо функцію, передану з MainActivity
+            onItemClick(transaction)
+        }
+
+        holder.itemView.setOnLongClickListener {
+            onItemLongClick(transaction)
+            true
         }
     }
 
@@ -87,6 +103,26 @@ class TransactionAdapter(
 
     fun updateData(newTransactions: List<Transaction>) {
         transactions = newTransactions
+        notifyDataSetChanged()
+    }
+
+    fun toggleSelection(id: String) {
+        if (selectedIds.contains(id)) {
+            selectedIds.remove(id)
+        } else {
+            selectedIds.add(id)
+        }
+        notifyDataSetChanged()
+    }
+
+    fun clearSelection() {
+        selectedIds.clear()
+        notifyDataSetChanged()
+    }
+
+    fun selectAll() {
+        selectedIds.clear()
+        selectedIds.addAll(transactions.map { it.id })
         notifyDataSetChanged()
     }
 }

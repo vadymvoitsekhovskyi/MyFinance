@@ -4,9 +4,13 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -31,6 +35,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var transactionAdapter: TransactionAdapter
     private lateinit var tvTotalBalance: TextView
     private lateinit var rvTransactions: RecyclerView
+    private lateinit var topPanel: LinearLayout
+    private lateinit var selectionPanel: LinearLayout
+    private lateinit var tvSelectedCount: TextView
+
+    private var currentTransactions: List<Transaction> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,17 +60,35 @@ class MainActivity : AppCompatActivity() {
         }
 
         val tvUserEmail = findViewById<TextView>(R.id.tvUserEmail)
-        // btnLogout видалено!
         val fabAddTransaction = findViewById<FloatingActionButton>(R.id.fabAddTransaction)
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
+        topPanel = findViewById(R.id.topPanel)
+        selectionPanel = findViewById(R.id.selectionPanel)
+        tvSelectedCount = findViewById(R.id.tvSelectedCount)
+
+        val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
+        val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
+        val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
 
         tvUserEmail.text = auth.currentUser?.email
 
-        // Налаштування списку та передача лямбди для обробки кліку
-        transactionAdapter = TransactionAdapter(emptyList()) { clickedTransaction ->
-            showTransactionDetailsBottomSheet(clickedTransaction)
-        }
+        // Налаштування адаптера з двома обробниками кліків
+        transactionAdapter = TransactionAdapter(
+            emptyList(),
+            onItemClick = { transaction ->
+                if (transactionAdapter.selectedIds.isNotEmpty()) {
+                    // Якщо ми в режимі виділення, клік також виділяє/знімає виділення
+                    toggleSelection(transaction.id)
+                } else {
+                    showTransactionDetailsBottomSheet(transaction)
+                }
+            },
+            onItemLongClick = { transaction ->
+                toggleSelection(transaction.id)
+            }
+        )
+
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = transactionAdapter
 
@@ -69,7 +96,43 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, AddTransactionActivity::class.java))
         }
 
+        // Обробники кнопок панелі виділення
+        btnCloseSelection.setOnClickListener {
+            clearSelection()
+        }
+
+        btnSelectAll.setOnClickListener {
+            transactionAdapter.selectAll()
+            updateSelectionUI()
+        }
+
+        btnDeleteSelected.setOnClickListener {
+            showDeleteConfirmationDialog(transactionAdapter.selectedIds.toList())
+        }
+
         loadTransactions()
+    }
+
+    private fun toggleSelection(id: String) {
+        transactionAdapter.toggleSelection(id)
+        updateSelectionUI()
+    }
+
+    private fun clearSelection() {
+        transactionAdapter.clearSelection()
+        updateSelectionUI()
+    }
+
+    private fun updateSelectionUI() {
+        val count = transactionAdapter.selectedIds.size
+        if (count > 0) {
+            topPanel.visibility = View.GONE
+            selectionPanel.visibility = View.VISIBLE
+            tvSelectedCount.text = "Вибрано: $count"
+        } else {
+            topPanel.visibility = View.VISIBLE
+            selectionPanel.visibility = View.GONE
+        }
     }
 
     private fun loadTransactions() {
@@ -90,10 +153,8 @@ class MainActivity : AppCompatActivity() {
 
                     for (document in snapshot.documents) {
                         val transaction = document.toObject(Transaction::class.java)
-
                         if (transaction != null) {
                             transactionsList.add(transaction)
-
                             if (transaction.type == "income") {
                                 totalBalance += transaction.amount
                             } else {
@@ -102,21 +163,24 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
+                    currentTransactions = transactionsList
                     transactionAdapter.updateData(transactionsList)
                     tvTotalBalance.text = String.format("%.2f ₴", totalBalance)
+
+                    // Оновлюємо UI виділення, якщо якісь транзакції були видалені через інший пристрій
+                    val validSelectedIds = transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
+                    transactionAdapter.selectedIds.clear()
+                    transactionAdapter.selectedIds.addAll(validSelectedIds)
+                    updateSelectionUI()
                 }
             }
     }
 
-    // --- ДОДАНО ---
-    // Функція для показу модального вікна знизу
     private fun showTransactionDetailsBottomSheet(transaction: Transaction) {
-        // Створюємо діалог і підключаємо до нього наш новий дизайн
         val bottomSheetDialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_transaction, null)
         bottomSheetDialog.setContentView(view)
 
-        // Знаходимо елементи всередині дизайну діалогу
         val bsType = view.findViewById<TextView>(R.id.bsType)
         val bsAmount = view.findViewById<TextView>(R.id.bsAmount)
         val bsCategoryValue = view.findViewById<TextView>(R.id.bsCategoryValue)
@@ -125,10 +189,11 @@ class MainActivity : AppCompatActivity() {
         val bsCommentLabel = view.findViewById<TextView>(R.id.bsCommentLabel)
         val divider3 = view.findViewById<View>(R.id.divider3)
 
-        // Заповнюємо даними
+        val btnEdit = view.findViewById<Button>(R.id.btnEdit)
+        val btnDelete = view.findViewById<Button>(R.id.btnDelete)
+
         bsCategoryValue.text = transaction.category
 
-        // Форматуємо повну дату та час
         val fullDateFormatter = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("uk", "UA"))
         fullDateFormatter.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
         bsDateValue.text = fullDateFormatter.format(Date(transaction.date))
@@ -153,10 +218,64 @@ class MainActivity : AppCompatActivity() {
             bsType.text = "Витрата"
             bsType.setTextColor(Color.parseColor("#F44336"))
             bsAmount.text = "- ${transaction.amount} ₴"
-            bsAmount.setTextColor(Color.parseColor("#000000")) // Можемо зробити суму чорною для контрасту у вікні
+            bsAmount.setTextColor(Color.parseColor("#000000"))
         }
 
-        // Показуємо діалог
+        btnEdit.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, AddTransactionActivity::class.java).apply {
+                putExtra("EXTRA_ID", transaction.id)
+                putExtra("EXTRA_TYPE", transaction.type)
+                putExtra("EXTRA_AMOUNT", transaction.amount)
+                putExtra("EXTRA_CATEGORY", transaction.category)
+                putExtra("EXTRA_COMMENT", transaction.comment)
+                putExtra("EXTRA_DATE", transaction.date)
+            }
+            startActivity(intent)
+        }
+
+        btnDelete.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showDeleteConfirmationDialog(listOf(transaction.id))
+        }
+
         bottomSheetDialog.show()
+    }
+
+    private fun showDeleteConfirmationDialog(transactionIds: List<String>) {
+        val message = if (transactionIds.size == 1) {
+            "Ви впевнені, що хочете видалити цю транзакцію?"
+        } else {
+            "Ви впевнені, що хочете видалити ${transactionIds.size} транзакцій?"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Підтвердження видалення")
+            .setMessage(message)
+            .setPositiveButton("Видалити") { _, _ ->
+                deleteTransactions(transactionIds)
+            }
+            .setNegativeButton("Скасувати", null)
+            .show()
+    }
+
+    private fun deleteTransactions(transactionIds: List<String>) {
+        val currentUser = auth.currentUser ?: return
+        val batch = db.batch()
+
+        transactionIds.forEach { id ->
+            val docRef = db.collection("users").document(currentUser.uid)
+                .collection("transactions").document(id)
+            batch.delete(docRef)
+        }
+
+        batch.commit()
+            .addOnSuccessListener {
+                Toast.makeText(this, "Успішно видалено!", Toast.LENGTH_SHORT).show()
+                clearSelection()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Помилка видалення: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 }
