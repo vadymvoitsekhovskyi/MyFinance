@@ -28,7 +28,6 @@ class TransactionAdapter(
         val layoutDateHeader: LinearLayout = itemView.findViewById(R.id.layoutDateHeader)
         val tvDateHeader: TextView = itemView.findViewById(R.id.tvDateHeader)
         val tvDateSum: TextView = itemView.findViewById(R.id.tvDateSum)
-
         val tvCategory: TextView = itemView.findViewById(R.id.tvCategory)
         val tvComment: TextView = itemView.findViewById(R.id.tvComment)
         val tvTime: TextView = itemView.findViewById(R.id.tvTime)
@@ -37,33 +36,35 @@ class TransactionAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_transaction, parent, false)
+        val view =
+            LayoutInflater.from(parent.context).inflate(R.layout.item_transaction, parent, false)
         return TransactionViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val transaction = transactions[position]
 
-        // Форматери дат
         val timeZone = TimeZone.getTimeZone("Europe/Kyiv")
-        val yearFormatter = SimpleDateFormat("yyyy", Locale("uk", "UA")).apply { this.timeZone = timeZone }
-        val dayMonthFormatter = SimpleDateFormat("dd MMMM", Locale("uk", "UA")).apply { this.timeZone = timeZone }
-        val exactDateFormatter = SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply { this.timeZone = timeZone }
-        val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault()).apply { this.timeZone = timeZone }
+        val yearFormatter =
+            SimpleDateFormat("yyyy", Locale("uk", "UA")).apply { this.timeZone = timeZone }
+        val dayMonthFormatter =
+            SimpleDateFormat("dd MMMM", Locale("uk", "UA")).apply { this.timeZone = timeZone }
+        val exactDateFormatter =
+            SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply { this.timeZone = timeZone }
+        val timeFormatter =
+            SimpleDateFormat("HH:mm", Locale.getDefault()).apply { this.timeZone = timeZone }
 
         val currentDateObj = Date(transaction.date)
         val currentYearStr = yearFormatter.format(currentDateObj)
         val currentDayMonthStr = dayMonthFormatter.format(currentDateObj)
         val currentExactDateStr = exactDateFormatter.format(currentDateObj)
 
-        // Скидаємо видимість заголовків перед перевіркою
         holder.tvYearHeader.visibility = View.GONE
         holder.layoutDateHeader.visibility = View.GONE
 
         var showYear = false
         var showDate = false
 
-        // Логіка відображення Року та Дати
         if (position == 0) {
             showYear = true
             showDate = true
@@ -76,26 +77,23 @@ class TransactionAdapter(
             if (currentExactDateStr != prevExactDateStr) showDate = true
         }
 
-        // Відображаємо рік
         if (showYear) {
             holder.tvYearHeader.visibility = View.VISIBLE
             holder.tvYearHeader.text = currentYearStr
         }
 
-        // Відображаємо дату і рахуємо суму за день
         if (showDate) {
             holder.layoutDateHeader.visibility = View.VISIBLE
             holder.tvDateHeader.text = currentDayMonthStr
 
             var daySum = 0.0
-            // Рахуємо суму всіх транзакцій за цей конкретний день
+
             transactions.forEach { t ->
                 if (exactDateFormatter.format(Date(t.date)) == currentExactDateStr) {
                     if (t.type == "income") daySum += t.amount else daySum -= t.amount
                 }
             }
 
-            // Форматуємо суму за день
             if (daySum > 0) {
                 holder.tvDateSum.text = String.format(Locale.US, "+ %.2f ₴", daySum)
                 holder.tvDateSum.setTextColor(Color.parseColor("#4CAF50"))
@@ -108,7 +106,6 @@ class TransactionAdapter(
             }
         }
 
-        // Заповнення даних самої транзакції
         holder.tvCategory.text = transaction.category
         holder.tvTime.text = timeFormatter.format(currentDateObj)
 
@@ -127,14 +124,12 @@ class TransactionAdapter(
             holder.tvAmount.setTextColor(Color.parseColor("#F44336"))
         }
 
-        // Відображення виділеного стану
         if (selectedIds.contains(transaction.id)) {
-            holder.cardView.setCardBackgroundColor(Color.parseColor("#E8F5E9")) // Змінено на ніжний зелений
+            holder.cardView.setCardBackgroundColor(Color.parseColor("#E8F5E9"))
         } else {
             holder.cardView.setCardBackgroundColor(Color.WHITE)
         }
 
-        // Кліки
         holder.itemView.setOnClickListener {
             onItemClick(transaction)
         }

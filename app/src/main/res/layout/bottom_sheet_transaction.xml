@@ -84,7 +84,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:text="20 Квітня 2026, 14:30"
+        android:text="20 Квітня 2026 14:30"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/bsDateLabel"
@@ -122,7 +122,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/bsCommentLabel" />
 
-    <!-- Кнопки керування -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -135,18 +134,18 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginEnd="8dp"
+            android:layout_weight="1"
             android:text="Редагувати"
-            app:strokeColor="@color/primary_green"
-            android:textColor="@color/primary_green" />
+            android:textColor="@color/primary_green"
+            app:strokeColor="@color/primary_green" />
 
         <Button
             android:id="@+id/btnDelete"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:layout_weight="1"
             android:backgroundTint="#F44336"
             android:text="Видалити"
             android:textColor="#FFFFFF" />

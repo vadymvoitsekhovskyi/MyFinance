@@ -6,24 +6,23 @@
     android:layout_height="match_parent"
     tools:context=".AddTransactionActivity">
 
-    <!-- Верхня панель (ідентична до інших екранів) -->
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
+        android:gravity="center_vertical"
         android:minHeight="?attr/actionBarSize"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
-        android:gravity="center_vertical"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/btnBack"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@android:drawable/ic_menu_revert"
-            android:contentDescription="Назад" />
+            android:contentDescription="Назад"
+            android:src="@android:drawable/ic_menu_revert" />
 
         <TextView
             android:id="@+id/tvTitle"
@@ -35,12 +34,11 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Основний контент -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -48,7 +46,6 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Перемикач: Дохід чи Витрата -->
             <RadioGroup
                 android:id="@+id/radioGroupType"
                 android:layout_width="match_parent"
@@ -73,7 +70,6 @@
                     android:textColor="#4CAF50" />
             </RadioGroup>
 
-            <!-- Поле для суми -->
             <EditText
                 android:id="@+id/etAmount"
                 android:layout_width="match_parent"
@@ -83,7 +79,6 @@
                 android:inputType="numberDecimal"
                 android:minHeight="48dp" />
 
-            <!-- Поле для категорії -->
             <EditText
                 android:id="@+id/etCategory"
                 android:layout_width="match_parent"
@@ -93,7 +88,6 @@
                 android:inputType="text"
                 android:minHeight="48dp" />
 
-            <!-- Поле для коментаря -->
             <EditText
                 android:id="@+id/etComment"
                 android:layout_width="match_parent"

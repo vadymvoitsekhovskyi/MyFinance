@@ -18,10 +18,8 @@ import com.project.course.myfinance.models.Transaction
 import java.util.UUID
 
 class AddTransactionActivity : AppCompatActivity() {
-
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
-
     private var editingTransactionId: String? = null
     private var originalDate: Long = 0L
 
@@ -42,7 +40,6 @@ class AddTransactionActivity : AppCompatActivity() {
 
         btnBack.setOnClickListener { finish() }
 
-        // Перевіряємо чи передані дані для РЕДАГУВАННЯ
         editingTransactionId = intent.getStringExtra("EXTRA_ID")
         if (editingTransactionId != null) {
             tvTitle.text = "Редагування"
@@ -67,17 +64,16 @@ class AddTransactionActivity : AppCompatActivity() {
             val type = if (rbExpense.isChecked) "expense" else "income"
 
             if (amountText.isBlank() || category.isBlank()) {
-                Toast.makeText(this, "Введіть суму та категорію!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Введіть суму та категорію", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val amount = amountText.replace(",", ".").toDoubleOrNull()
             if (amount == null || amount <= 0) {
-                Toast.makeText(this, "Введіть коректну суму!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Введіть коректну суму", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Запит на підтвердження збереження
             AlertDialog.Builder(this)
                 .setTitle("Збереження")
                 .setMessage(if (editingTransactionId != null) "Зберегти внесені зміни?" else "Додати нову транзакцію?")
@@ -95,16 +91,16 @@ class AddTransactionActivity : AppCompatActivity() {
     ) {
         val currentUser = auth.currentUser
         if (currentUser == null) {
-            Toast.makeText(this, "Помилка: Користувач не авторизований", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Помилка: користувач не авторизований", Toast.LENGTH_SHORT).show()
             return
         }
 
         progressBar.visibility = View.VISIBLE
         btnSave.isEnabled = false
 
-        // Якщо редагуємо, беремо існуючий ID та дату, інакше генеруємо нові
         val transactionId = editingTransactionId ?: UUID.randomUUID().toString()
-        val transactionDate = if (editingTransactionId != null) originalDate else System.currentTimeMillis()
+        val transactionDate =
+            if (editingTransactionId != null) originalDate else System.currentTimeMillis()
 
         val transaction = Transaction(
             id = transactionId,
@@ -120,7 +116,7 @@ class AddTransactionActivity : AppCompatActivity() {
             .set(transaction)
             .addOnSuccessListener {
                 progressBar.visibility = View.GONE
-                Toast.makeText(this, "Успішно збережено!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Успішно збережено", Toast.LENGTH_SHORT).show()
                 finish()
             }
             .addOnFailureListener { e ->

@@ -32,10 +32,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
-
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
-
     private lateinit var transactionAdapter: TransactionAdapter
     private lateinit var tvTotalBalance: TextView
     private lateinit var rvTransactions: RecyclerView
@@ -44,10 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvSelectedCount: TextView
     private lateinit var tvProfileLetter: TextView
     private lateinit var ivProfile: ImageView
-
     private var currentTransactions: List<Transaction> = emptyList()
-
-    // Змінні для пагінації
     private var currentLimit: Long = 10L
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
@@ -78,8 +73,8 @@ class MainActivity : AppCompatActivity() {
         tvSelectedCount = findViewById(R.id.tvSelectedCount)
         tvProfileLetter = findViewById(R.id.tvProfileLetter)
         ivProfile = findViewById(R.id.ivProfile)
-        val cvProfile = findViewById<CardView>(R.id.cvProfile)
 
+        val cvProfile = findViewById<CardView>(R.id.cvProfile)
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
@@ -88,31 +83,26 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
 
-        transactionAdapter = TransactionAdapter(
-            emptyList(),
-            onItemClick = { transaction ->
-                if (transactionAdapter.selectedIds.isNotEmpty()) {
-                    toggleSelection(transaction.id)
-                } else {
-                    showTransactionDetailsBottomSheet(transaction)
-                }
-            },
-            onItemLongClick = { transaction ->
+        transactionAdapter = TransactionAdapter(emptyList(), onItemClick = { transaction ->
+            if (transactionAdapter.selectedIds.isNotEmpty()) {
                 toggleSelection(transaction.id)
+            } else {
+                showTransactionDetailsBottomSheet(transaction)
             }
-        )
+        }, onItemLongClick = { transaction ->
+            toggleSelection(transaction.id)
+        })
 
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = transactionAdapter
 
-        // Слухач для пагінації (завантаження додаткових транзакцій при скролі вниз)
         rvTransactions.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-                // Якщо неможливо скролити вниз (дійшли до кінця)
+
                 if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    currentLimit += 10L // Збільшуємо ліміт на 10 сторінок
-                    loadTransactions() // Завантажуємо оновлений список
+                    currentLimit += 10L
+                    loadTransactions()
                 }
             }
         })
@@ -130,8 +120,8 @@ class MainActivity : AppCompatActivity() {
             showDeleteConfirmationDialog(transactionAdapter.selectedIds.toList())
         }
 
-        loadTotalBalance() // Спочатку завантажуємо загальний баланс з усієї бази
-        loadTransactions() // Завантажуємо перші 10 транзакцій
+        loadTotalBalance()
+        loadTransactions()
         updateProfileIcon()
     }
 
@@ -153,25 +143,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateProfileIcon() {
         val user = auth.currentUser ?: return
-
         val nameToUse = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.email ?: "U"
+
         if (nameToUse.isNotEmpty()) {
             tvProfileLetter.text = nameToUse.first().uppercase()
         }
 
-        db.collection("users").document(user.uid).get()
-            .addOnSuccessListener { document ->
+        db.collection("users").document(user.uid).get().addOnSuccessListener { document ->
                 if (document != null && document.contains("avatarBase64")) {
                     val base64String = document.getString("avatarBase64")
                     if (!base64String.isNullOrEmpty()) {
                         try {
                             val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
-                            val decodedBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                            val decodedBitmap =
+                                BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
                             ivProfile.setImageBitmap(decodedBitmap)
                             ivProfile.visibility = View.VISIBLE
                             tvProfileLetter.visibility = View.GONE
                         } catch (e: Exception) {
-                            // Ігноруємо помилки декодування
                         }
                     } else {
                         ivProfile.visibility = View.GONE
@@ -206,61 +195,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Окремий запит для правильного відображення загального балансу (всі транзакції)
     private fun loadTotalBalance() {
         val currentUser = auth.currentUser ?: return
 
         balanceListener?.remove()
-        balanceListener = db.collection("users").document(currentUser.uid)
-            .collection("transactions")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+        balanceListener =
+            db.collection("users").document(currentUser.uid).collection("transactions")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
 
-                var totalBalance = 0.0
-                for (doc in snapshot.documents) {
-                    val type = doc.getString("type") ?: "expense"
-                    val amount = doc.getDouble("amount") ?: 0.0
-                    if (type == "income") totalBalance += amount else totalBalance -= amount
+                    var totalBalance = 0.0
+                    for (doc in snapshot.documents) {
+                        val type = doc.getString("type") ?: "expense"
+                        val amount = doc.getDouble("amount") ?: 0.0
+                        if (type == "income") totalBalance += amount else totalBalance -= amount
+                    }
+                    tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", totalBalance)
                 }
-                tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", totalBalance)
-            }
     }
 
-    // Запит для відображення списку з ПАГІНАЦІЄЮ (limit)
     private fun loadTransactions() {
         val currentUser = auth.currentUser ?: return
 
-        snapshotListener?.remove() // Видаляємо попередній слухач перед встановленням нового з більшим лімітом
+        snapshotListener?.remove()
 
-        snapshotListener = db.collection("users").document(currentUser.uid)
-            .collection("transactions")
-            .orderBy("date", Query.Direction.DESCENDING)
-            .limit(currentLimit) // Встановлюємо пагінацію (10, 20, 30...)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT).show()
-                    return@addSnapshotListener
-                }
-
-                if (snapshot != null) {
-                    val transactionsList = mutableListOf<Transaction>()
-
-                    for (document in snapshot.documents) {
-                        val transaction = document.toObject(Transaction::class.java)
-                        if (transaction != null) {
-                            transactionsList.add(transaction)
-                        }
+        snapshotListener =
+            db.collection("users").document(currentUser.uid).collection("transactions")
+                .orderBy("date", Query.Direction.DESCENDING).limit(currentLimit)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT)
+                            .show()
+                        return@addSnapshotListener
                     }
 
-                    currentTransactions = transactionsList
-                    transactionAdapter.updateData(transactionsList)
+                    if (snapshot != null) {
+                        val transactionsList = mutableListOf<Transaction>()
 
-                    val validSelectedIds = transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
-                    transactionAdapter.selectedIds.clear()
-                    transactionAdapter.selectedIds.addAll(validSelectedIds)
-                    updateSelectionUI()
+                        for (document in snapshot.documents) {
+                            val transaction = document.toObject(Transaction::class.java)
+                            if (transaction != null) {
+                                transactionsList.add(transaction)
+                            }
+                        }
+
+                        currentTransactions = transactionsList
+                        transactionAdapter.updateData(transactionsList)
+
+                        val validSelectedIds =
+                            transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
+                        transactionAdapter.selectedIds.clear()
+                        transactionAdapter.selectedIds.addAll(validSelectedIds)
+                        updateSelectionUI()
+                    }
                 }
-            }
     }
 
     private fun showTransactionDetailsBottomSheet(transaction: Transaction) {
@@ -275,13 +263,12 @@ class MainActivity : AppCompatActivity() {
         val bsCommentValue = view.findViewById<TextView>(R.id.bsCommentValue)
         val bsCommentLabel = view.findViewById<TextView>(R.id.bsCommentLabel)
         val divider3 = view.findViewById<View>(R.id.divider3)
-
         val btnEdit = view.findViewById<Button>(R.id.btnEdit)
         val btnDelete = view.findViewById<Button>(R.id.btnDelete)
 
         bsCategoryValue.text = transaction.category
 
-        val fullDateFormatter = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("uk", "UA"))
+        val fullDateFormatter = SimpleDateFormat("dd MMMM yyyy HH:mm", Locale("uk", "UA"))
         fullDateFormatter.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
         bsDateValue.text = fullDateFormatter.format(Date(transaction.date))
 
@@ -336,14 +323,10 @@ class MainActivity : AppCompatActivity() {
             "Ви впевнені, що хочете видалити ${transactionIds.size} транзакцій?"
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Підтвердження видалення")
-            .setMessage(message)
+        AlertDialog.Builder(this).setTitle("Підтвердження видалення").setMessage(message)
             .setPositiveButton("Видалити") { _, _ ->
                 deleteTransactions(transactionIds)
-            }
-            .setNegativeButton("Скасувати", null)
-            .show()
+            }.setNegativeButton("Скасувати", null).show()
     }
 
     private fun deleteTransactions(transactionIds: List<String>) {
@@ -351,17 +334,15 @@ class MainActivity : AppCompatActivity() {
         val batch = db.batch()
 
         transactionIds.forEach { id ->
-            val docRef = db.collection("users").document(currentUser.uid)
-                .collection("transactions").document(id)
+            val docRef = db.collection("users").document(currentUser.uid).collection("transactions")
+                .document(id)
             batch.delete(docRef)
         }
 
-        batch.commit()
-            .addOnSuccessListener {
-                Toast.makeText(this, "Успішно видалено!", Toast.LENGTH_SHORT).show()
+        batch.commit().addOnSuccessListener {
+                Toast.makeText(this, "Успішно видалено", Toast.LENGTH_SHORT).show()
                 clearSelection()
-            }
-            .addOnFailureListener { e ->
+            }.addOnFailureListener { e ->
                 Toast.makeText(this, "Помилка видалення: ${e.message}", Toast.LENGTH_LONG).show()
             }
     }

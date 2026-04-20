@@ -19,7 +19,6 @@ import com.project.course.myfinance.auth.AuthState
 import com.project.course.myfinance.auth.AuthViewModel
 
 class LoginActivity : AppCompatActivity() {
-
     private lateinit var viewModel: AuthViewModel
     private val auth = FirebaseAuth.getInstance()
 
@@ -38,7 +37,8 @@ class LoginActivity : AppCompatActivity() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val type =
+                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             etPassword.inputType = type
             etPassword.setSelection(etPassword.text.length)
         }
@@ -49,16 +49,19 @@ class LoginActivity : AppCompatActivity() {
                     progressBar.visibility = View.VISIBLE
                     btnLogin.isEnabled = false
                 }
+
                 is AuthState.Success -> {
                     progressBar.visibility = View.GONE
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 }
+
                 is AuthState.Error -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
                     Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
                 }
+
                 is AuthState.Idle -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
@@ -76,20 +79,18 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
 
-        // Обробка кліку "Забули пароль?"
         tvForgotPassword.setOnClickListener {
             showForgotPasswordDialog(etEmail.text.toString())
         }
     }
 
     private fun showForgotPasswordDialog(prefilledEmail: String) {
-        // Створюємо контейнер з відступами, щоб поле вводу не торкалося країв
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(50, 40, 50, 10)
 
         val input = EditText(this)
-        input.hint = "Введіть ваш Email"
+        input.hint = "Введіть ваш email"
         input.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         if (prefilledEmail.isNotEmpty()) {
             input.setText(prefilledEmail)
@@ -99,8 +100,8 @@ class LoginActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("Відновлення пароля")
-            .setMessage("Введіть email, на який ми надішлемо посилання для створення нового пароля.")
-            .setView(layout) // Передаємо layout з відступами
+            .setMessage("Введіть email, на який буде надіслано посилання для створення нового пароля.")
+            .setView(layout)
             .setPositiveButton("Надіслати") { _, _ ->
                 val email = input.text.toString().trim()
                 if (email.isNotEmpty()) {
@@ -117,9 +118,14 @@ class LoginActivity : AppCompatActivity() {
         auth.sendPasswordResetEmail(email)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Toast.makeText(this, "Лист для відновлення надіслано на $email. Перевірте пошту.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this,
+                        "Лист для відновлення надіслано на $email. Перевірте пошту.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 } else {
-                    Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG)
+                        .show()
                 }
             }
     }

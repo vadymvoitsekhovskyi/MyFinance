@@ -19,10 +19,10 @@
             android:id="@+id/topPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:minHeight="?attr/actionBarSize"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:gravity="center_vertical">
+            android:paddingHorizontal="16dp">
 
             <ImageView
                 android:id="@+id/ivLogo"
@@ -36,9 +36,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="MyFinance"
+                android:textColor="#212121"
                 android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="#212121" />
+                android:textStyle="bold" />
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/cvProfile"
@@ -47,8 +47,10 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/primary_green"
                 app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="@color/primary_green" app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                app:cardPreventCornerOverlap="false">
 
                 <TextView
                     android:id="@+id/tvProfileLetter"
@@ -74,12 +76,12 @@
             android:id="@+id/selectionPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@color/selection_green"
+            android:gravity="center_vertical"
             android:minHeight="?attr/actionBarSize"
             android:orientation="horizontal"
             android:paddingHorizontal="16dp"
-            android:background="@color/selection_green"
-            android:visibility="gone"
-            android:gravity="center_vertical">
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/btnCloseSelection"
@@ -92,8 +94,8 @@
                 android:id="@+id/tvSelectedCount"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:layout_marginStart="16dp"
+                android:layout_weight="1"
                 android:text="Вибрано: 1"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -115,7 +117,6 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Картка з балансом -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardBalance"
         android:layout_width="match_parent"
@@ -180,11 +181,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
+        android:contentDescription="Додати транзакцію"
         android:src="@android:drawable/ic_input_add"
         app:backgroundTint="@color/primary_green"
-        app:tint="#FFFFFF"
-        android:contentDescription="Додати транзакцію"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="#FFFFFF" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

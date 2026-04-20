@@ -36,32 +36,30 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 class ProfileActivity : AppCompatActivity() {
-
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
-
     private lateinit var tvBigProfileLetter: TextView
     private lateinit var ivBigProfile: ImageView
     private lateinit var tvEmailDisplay: TextView
     private lateinit var tvNameDisplay: TextView
     private lateinit var progressBar: ProgressBar
-
-    // Змінна для збереження вибраного формату при експорті
     private var currentExportFormat: String = "csv"
     private val gson = Gson()
 
-    // Лаунчери для фото та файлів
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { saveAvatarToFirestoreAsBase64(it) }
-    }
+    private val pickImageLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { saveAvatarToFirestoreAsBase64(it) }
+        }
 
-    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri: Uri? ->
-        uri?.let { performExport(it) }
-    }
+    private val exportLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri: Uri? ->
+            uri?.let { performExport(it) }
+        }
 
-    private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { performImport(it) }
-    }
+    private val importLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { performImport(it) }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,8 +71,8 @@ class ProfileActivity : AppCompatActivity() {
         tvEmailDisplay = findViewById(R.id.tvEmailDisplay)
         tvNameDisplay = findViewById(R.id.tvNameDisplay)
         progressBar = findViewById(R.id.progressBar)
-        val cvBigProfile = findViewById<CardView>(R.id.cvBigProfile)
 
+        val cvBigProfile = findViewById<CardView>(R.id.cvBigProfile)
         val btnChangeName = findViewById<Button>(R.id.btnChangeName)
         val btnChangeEmail = findViewById<Button>(R.id.btnChangeEmail)
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
@@ -84,26 +82,17 @@ class ProfileActivity : AppCompatActivity() {
         val btnDeleteAccount = findViewById<Button>(R.id.btnDeleteAccount)
 
         btnBack.setOnClickListener { finish() }
-
         updateUI()
         loadAvatarFromFirestore()
-
         cvBigProfile.setOnClickListener { showAvatarOptionsDialog() }
         btnChangeName.setOnClickListener { showChangeNameDialog() }
         btnChangeEmail.setOnClickListener { showChangeEmailDialog() }
         btnChangePassword.setOnClickListener { showChangePasswordDialog() }
-
-        // Нові обробники для експорту/імпорту
         btnExportData.setOnClickListener { showExportDialog() }
         btnImportData.setOnClickListener { showImportDialog() }
-
         btnLogout.setOnClickListener { showLogoutDialog() }
         btnDeleteAccount.setOnClickListener { showDeleteAccountDialog() }
     }
-
-    // ==========================================
-    // ЛОГІКА ЕКСПОРТУ ТА ІМПОРТУ
-    // ==========================================
 
     private fun showExportDialog() {
         val formats = arrayOf("CSV", "JSON")
@@ -134,32 +123,37 @@ class ProfileActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Отримуємо всі транзакції користувача
                 val snapshot = db.collection("users").document(user.uid)
                     .collection("transactions").get().await()
 
                 val transactions = snapshot.toObjects(Transaction::class.java)
 
-                // Формуємо текст залежно від формату
                 val content = if (currentExportFormat == "json") {
                     gson.toJson(transactions)
                 } else {
                     buildCsvString(transactions)
                 }
 
-                // Записуємо у файл
                 contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(content.toByteArray(Charsets.UTF_8))
                 }
 
                 withContext(Dispatchers.Main) {
                     setLoading(false)
-                    Toast.makeText(this@ProfileActivity, "Дані успішно експортовано", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Дані успішно експортовано",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     setLoading(false)
-                    Toast.makeText(this@ProfileActivity, "Помилка експорту: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Помилка експорту: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -169,11 +163,10 @@ class ProfileActivity : AppCompatActivity() {
         setLoading(true)
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Читаємо вміст файлу
-                val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                val content =
+                    contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 if (content.isNullOrBlank()) throw Exception("Файл порожній або його неможливо прочитати")
 
-                // Визначаємо формат по контенту (починається з [ - це масив JSON)
                 val isJson = content.trimStart().startsWith("[")
 
                 val importedTransactions = if (isJson) {
@@ -187,7 +180,6 @@ class ProfileActivity : AppCompatActivity() {
                     throw Exception("Не знайдено коректних даних у файлі")
                 }
 
-                // Зберігаємо транзакції в базу порціями (батчами) по 500 штук
                 val user = auth.currentUser ?: return@launch
                 val chunks = importedTransactions.chunked(500)
 
@@ -203,12 +195,20 @@ class ProfileActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     setLoading(false)
-                    Toast.makeText(this@ProfileActivity, "Успішно імпортовано ${importedTransactions.size} транзакцій!", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Успішно імпортовано ${importedTransactions.size} транзакцій",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     setLoading(false)
-                    Toast.makeText(this@ProfileActivity, "Помилка імпорту: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Помилка імпорту: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -241,25 +241,22 @@ class ProfileActivity : AppCompatActivity() {
             val tokens = line.split(csvRegex).map { it.trim('\"') }
             if (tokens.size >= 5) {
                 try {
-                    list.add(Transaction(
-                        id = tokens[0],
-                        type = tokens[1],
-                        category = tokens[2],
-                        amount = tokens[3].toDoubleOrNull() ?: 0.0,
-                        date = tokens[4].toLongOrNull() ?: System.currentTimeMillis(),
-                        comment = if (tokens.size > 5) tokens[5] else ""
-                    ))
+                    list.add(
+                        Transaction(
+                            id = tokens[0],
+                            type = tokens[1],
+                            category = tokens[2],
+                            amount = tokens[3].toDoubleOrNull() ?: 0.0,
+                            date = tokens[4].toLongOrNull() ?: System.currentTimeMillis(),
+                            comment = if (tokens.size > 5) tokens[5] else ""
+                        )
+                    )
                 } catch (e: Exception) {
-                    // Пропускаємо некоректні рядки
                 }
             }
         }
         return list
     }
-
-    // ==========================================
-    // ЛОГІКА ПРОФІЛЮ
-    // ==========================================
 
     private fun updateUI() {
         val user = auth.currentUser ?: return
@@ -301,26 +298,24 @@ class ProfileActivity : AppCompatActivity() {
         try {
             val inputStream = contentResolver.openInputStream(imageUri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
-
-            // Збільшуємо ширину та якість фото для кращого відображення
             val ratio: Float = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
-            val width = 800 // Було 300
+            val width = 800
             val height = (width / ratio).toInt()
             val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
-
             val outputStream = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream) // Було 60
+
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+
             val byteArray = outputStream.toByteArray()
             val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
-
             val user = auth.currentUser ?: return
-
             val data = hashMapOf("avatarBase64" to base64String)
+
             db.collection("users").document(user.uid)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
                     setLoading(false)
-                    Toast.makeText(this, "Фото оновлено!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Фото оновлено", Toast.LENGTH_SHORT).show()
                     loadAvatarFromFirestore()
                 }
                 .addOnFailureListener {
@@ -343,12 +338,12 @@ class ProfileActivity : AppCompatActivity() {
                     if (!base64String.isNullOrEmpty()) {
                         try {
                             val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
-                            val decodedBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                            val decodedBitmap =
+                                BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
                             ivBigProfile.setImageBitmap(decodedBitmap)
                             ivBigProfile.visibility = View.VISIBLE
                             tvBigProfileLetter.visibility = View.GONE
                         } catch (e: Exception) {
-                            // Ігноруємо
                         }
                     } else {
                         ivBigProfile.visibility = View.GONE
@@ -376,7 +371,6 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeNameDialog() {
-        // Обертаємо поле вводу у LinearLayout з відступами (padding)
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(50, 40, 50, 10)
@@ -404,7 +398,11 @@ class ProfileActivity : AppCompatActivity() {
                                 Toast.makeText(this, "Ім'я оновлено", Toast.LENGTH_SHORT).show()
                                 updateUI()
                             } else {
-                                Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this,
+                                    "Помилка: ${task.exception?.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                 }
@@ -431,7 +429,8 @@ class ProfileActivity : AppCompatActivity() {
         val cbShowPassword = android.widget.CheckBox(this)
         cbShowPassword.text = "Показати пароль"
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val type =
+                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             passInput.inputType = type
             passInput.setSelection(passInput.text.length)
         }
@@ -455,12 +454,20 @@ class ProfileActivity : AppCompatActivity() {
                         user.verifyBeforeUpdateEmail(newEmail).addOnCompleteListener { task ->
                             setLoading(false)
                             if (task.isSuccessful) {
-                                Toast.makeText(this, "Лист для підтвердження відправлено на новий email. Перезайдіть після підтвердження.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this,
+                                    "Лист для підтвердження відправлено на новий email. Перезайдіть після підтвердження.",
+                                    Toast.LENGTH_LONG
+                                ).show()
                                 dialog.dismiss()
                                 auth.signOut()
                                 goToLogin()
                             } else {
-                                Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this,
+                                    "Помилка: ${task.exception?.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                     }, {})
@@ -489,13 +496,15 @@ class ProfileActivity : AppCompatActivity() {
 
         val confirmPassInput = EditText(this)
         confirmPassInput.hint = "Підтвердіть новий пароль"
-        confirmPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        confirmPassInput.inputType =
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(confirmPassInput)
 
         val cbShowPassword = android.widget.CheckBox(this)
         cbShowPassword.text = "Показати паролі"
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val type =
+                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             oldPassInput.inputType = type
             newPassInput.inputType = type
             confirmPassInput.inputType = type
@@ -525,11 +534,12 @@ class ProfileActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
                 if (newPass.length < 6) {
-                    Toast.makeText(this, "Новий пароль має бути від 6 символів", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Новий пароль має бути від 6 символів", Toast.LENGTH_SHORT)
+                        .show()
                     return@setOnClickListener
                 }
                 if (newPass != confirmPass) {
-                    Toast.makeText(this, "Паролі не співпадають!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Паролі не співпадають", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
@@ -537,12 +547,20 @@ class ProfileActivity : AppCompatActivity() {
                     user.updatePassword(newPass).addOnCompleteListener { task ->
                         setLoading(false)
                         if (task.isSuccessful) {
-                            Toast.makeText(this, "Пароль оновлено! Увійдіть знову.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Пароль оновлено! Увійдіть знову.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             dialog.dismiss()
                             auth.signOut()
                             goToLogin()
                         } else {
-                            Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this,
+                                "Помилка: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 }, {})
@@ -576,7 +594,8 @@ class ProfileActivity : AppCompatActivity() {
         val cbShowPassword = android.widget.CheckBox(this)
         cbShowPassword.text = "Показати пароль"
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val type =
+                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             input.inputType = type
             input.setSelection(input.text.length)
         }
@@ -621,7 +640,8 @@ class ProfileActivity : AppCompatActivity() {
                     onSuccess(user)
                 } else {
                     setLoading(false)
-                    Toast.makeText(this, "Помилка авторизації: Невірний пароль", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Помилка авторизації: невірний пароль", Toast.LENGTH_LONG)
+                        .show()
                     onFailure()
                 }
             }
@@ -645,10 +665,15 @@ class ProfileActivity : AppCompatActivity() {
                     user.delete().addOnCompleteListener { task ->
                         setLoading(false)
                         if (task.isSuccessful) {
-                            Toast.makeText(this, "Акаунт успішно видалено", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Акаунт успішно видалено", Toast.LENGTH_SHORT)
+                                .show()
                             goToLogin()
                         } else {
-                            Toast.makeText(this, "Помилка видалення акаунта: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this,
+                                "Помилка видалення акаунта: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 }

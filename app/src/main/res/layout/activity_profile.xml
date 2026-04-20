@@ -7,24 +7,23 @@
     android:background="#F8F9FA"
     tools:context=".ProfileActivity">
 
-    <!-- Верхня панель -->
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
+        android:gravity="center_vertical"
         android:minHeight="?attr/actionBarSize"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
-        android:gravity="center_vertical"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/btnBack"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@android:drawable/ic_menu_revert"
-            android:contentDescription="Назад" />
+            android:contentDescription="Назад"
+            android:src="@android:drawable/ic_menu_revert" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -43,12 +42,12 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?android:attr/selectableItemBackground"
-        app:cardCornerRadius="60dp"
         app:cardBackgroundColor="@color/primary_green"
+        app:cardCornerRadius="60dp"
         app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
 
         <TextView
             android:id="@+id/tvBigProfileLetter"
@@ -71,13 +70,13 @@
     <ImageView
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:src="@android:drawable/ic_menu_edit"
-        app:tint="#4CAF50"
         android:background="@drawable/rounded_bottom_sheet"
-        android:padding="6dp"
         android:elevation="6dp"
+        android:padding="6dp"
+        android:src="@android:drawable/ic_menu_edit"
         app:layout_constraintBottom_toBottomOf="@id/cvBigProfile"
-        app:layout_constraintEnd_toEndOf="@id/cvBigProfile" />
+        app:layout_constraintEnd_toEndOf="@id/cvBigProfile"
+        app:tint="#4CAF50" />
 
     <TextView
         android:id="@+id/tvEmailDisplay"
@@ -85,11 +84,11 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="user@email.com"
-        android:textSize="16sp"
         android:textColor="#757575"
-        app:layout_constraintTop_toBottomOf="@id/cvBigProfile"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/cvBigProfile" />
 
     <TextView
         android:id="@+id/tvNameDisplay"
@@ -99,16 +98,16 @@
         android:text="Ім'я не вказано"
         android:textSize="20sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/tvEmailDisplay"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/tvEmailDisplay" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvNameDisplay"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvNameDisplay">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -122,79 +121,77 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Змінити ім'я"
-                android:layout_marginBottom="4dp"/>
+                android:layout_marginBottom="4dp"
+                android:text="Змінити ім'я" />
 
             <Button
                 android:id="@+id/btnChangeEmail"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Змінити Email"
-                android:layout_marginBottom="4dp"/>
+                android:layout_marginBottom="4dp"
+                android:text="Змінити Email" />
 
             <Button
                 android:id="@+id/btnChangePassword"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Змінити Пароль"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:text="Змінити Пароль" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#E0E0E0"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:background="#E0E0E0" />
 
-            <!-- НОВІ КНОПКИ: ЕКСПОРТ ТА ІМПОРТ -->
             <Button
                 android:id="@+id/btnExportData"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
                 android:text="Експорт (CSV / JSON)"
-                app:icon="@android:drawable/ic_menu_save"
-                app:strokeColor="#4CAF50"
                 android:textColor="#4CAF50"
+                app:icon="@android:drawable/ic_menu_save"
                 app:iconTint="#4CAF50"
-                android:layout_marginBottom="4dp"/>
+                app:strokeColor="#4CAF50" />
 
             <Button
                 android:id="@+id/btnImportData"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
                 android:text="Імпорт (CSV / JSON)"
-                app:icon="@android:drawable/ic_menu_upload"
-                app:strokeColor="#FF9800"
                 android:textColor="#FF9800"
+                app:icon="@android:drawable/ic_menu_upload"
                 app:iconTint="#FF9800"
-                android:layout_marginBottom="12dp"/>
+                app:strokeColor="#FF9800" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#E0E0E0"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="16dp"
+                android:background="#E0E0E0" />
 
-            <!-- Заокруглені кнопки виходу та видалення -->
             <Button
                 android:id="@+id/btnLogout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Вийти з акаунта"
+                android:layout_marginBottom="4dp"
                 android:backgroundTint="#757575"
-                android:layout_marginBottom="4dp"/>
+                android:text="Вийти з акаунта" />
 
             <Button
                 android:id="@+id/btnDeleteAccount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Видалити акаунт"
-                android:textColor="#FFFFFF"
+                android:layout_marginBottom="16dp"
                 android:backgroundTint="#F44336"
-                android:layout_marginBottom="16dp"/>
+                android:text="Видалити акаунт"
+                android:textColor="#FFFFFF" />
 
         </LinearLayout>
     </ScrollView>
@@ -204,9 +201,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

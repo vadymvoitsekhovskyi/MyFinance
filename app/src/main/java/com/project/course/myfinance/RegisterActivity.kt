@@ -14,7 +14,6 @@ import com.project.course.myfinance.auth.AuthState
 import com.project.course.myfinance.auth.AuthViewModel
 
 class RegisterActivity : AppCompatActivity() {
-
     private lateinit var viewModel: AuthViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +31,8 @@ class RegisterActivity : AppCompatActivity() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val type =
+                if (isChecked) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             etPassword.inputType = type
             etPassword.setSelection(etPassword.text.length)
         }
@@ -43,19 +43,20 @@ class RegisterActivity : AppCompatActivity() {
                     progressBar.visibility = View.VISIBLE
                     btnRegister.isEnabled = false
                 }
+
                 is AuthState.Success -> {
                     progressBar.visibility = View.GONE
-                    // Після реєстрації відразу переходимо на головний екран
                     val intent = Intent(this, MainActivity::class.java)
-                    // Очищаємо стек екранів, щоб користувач не міг повернутись на реєстрацію
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                 }
+
                 is AuthState.Error -> {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
                     Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
                 }
+
                 is AuthState.Idle -> {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
@@ -71,7 +72,7 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         tvGoToLogin.setOnClickListener {
-            finish() // Просто закриваємо цей екран і повертаємось на екран Логіну
+            finish()
         }
     }
 }

@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-// Клас для опису станів екрану
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
@@ -14,19 +13,11 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-/**
- * ViewModel керує логікою екрану.
- * Бере дані з UI -> передає в Repository -> повертає стан в UI.
- */
 class AuthViewModel : ViewModel() {
-
     private val repository = AuthRepository()
-
-    // Змінна, яку буде слухати наш екран (Activity)
     private val _authState = MutableLiveData<AuthState>(AuthState.Idle)
     val authState: LiveData<AuthState> = _authState
 
-    // В реєстрації залишаємо поле name
     fun register(email: String, password: String, name: String = "") {
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Заповніть всі поля")
@@ -39,7 +30,6 @@ class AuthViewModel : ViewModel() {
 
         _authState.value = AuthState.Loading
 
-        // Запускаємо фонову задачу (корутину)
         viewModelScope.launch {
             try {
                 repository.register(email, password, name)
@@ -50,7 +40,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // У вході прибираємо name
     fun login(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Заповніть всі поля")
