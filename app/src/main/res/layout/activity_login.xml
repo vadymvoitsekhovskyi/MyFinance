@@ -59,7 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Забули пароль?"
-        android:textColor="#2196F3"
+        android:textColor="@color/primary_green"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/etPassword" />
@@ -80,7 +80,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Немає акаунту? Зареєструватись"
-        android:textColor="#0000FF"
+        android:textColor="@color/primary_green"
         android:padding="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

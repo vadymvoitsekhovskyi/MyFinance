@@ -129,7 +129,7 @@ class TransactionAdapter(
 
         // Відображення виділеного стану
         if (selectedIds.contains(transaction.id)) {
-            holder.cardView.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
+            holder.cardView.setCardBackgroundColor(Color.parseColor("#E8F5E9")) // Змінено на ніжний зелений
         } else {
             holder.cardView.setCardBackgroundColor(Color.WHITE)
         }

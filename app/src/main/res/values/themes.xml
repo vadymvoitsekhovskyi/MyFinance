@@ -1,9 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.MyFinance" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/primary_green</item>
+        <item name="colorSecondary">@color/primary_green_light</item>
     </style>
-
     <style name="Theme.MyFinance" parent="Base.Theme.MyFinance" />
 </resources>
