@@ -64,6 +64,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnFilterExpense: Button
     private lateinit var btnFilterIncome: Button
 
+    private var isBalanceVisible = false
+    private var currentTotalBalance = 0.0
+
     private val animatedIcons = listOf(
         R.drawable.icon_anim_1,
         R.drawable.icon_anim_2,
@@ -103,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         ivBalanceLogo = findViewById(R.id.ivBalanceLogo)
 
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
+        val cardBalance = findViewById<CardView>(R.id.cardBalance)
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
@@ -110,6 +114,12 @@ class MainActivity : AppCompatActivity() {
         btnFilterAll = findViewById(R.id.btnFilterAll)
         btnFilterExpense = findViewById(R.id.btnFilterExpense)
         btnFilterIncome = findViewById(R.id.btnFilterIncome)
+
+        tvTotalBalance.text = "****** ₴"
+
+        cardBalance.setOnClickListener {
+            toggleBalanceVisibility()
+        }
 
         btnFilterAll.setOnClickListener { setFilter("all") }
         btnFilterExpense.setOnClickListener { setFilter("expense") }
@@ -181,6 +191,23 @@ class MainActivity : AppCompatActivity() {
         loadTransactions()
         updateProfileIcon()
         startAnimatedIconsLoop()
+    }
+
+    private fun toggleBalanceVisibility() {
+        if (isBalanceVisible) {
+            isBalanceVisible = false
+            tvTotalBalance.text = "****** ₴"
+        } else {
+            isBalanceVisible = true
+            tvTotalBalance.text = "..."
+
+            lifecycleScope.launch {
+                delay(300)
+                if (isBalanceVisible) {
+                    tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+                }
+            }
+        }
     }
 
     private fun startAnimatedIconsLoop() {
@@ -340,7 +367,12 @@ class MainActivity : AppCompatActivity() {
                         val amount = doc.getDouble("amount") ?: 0.0
                         if (type == "income") totalBalance += amount else totalBalance -= amount
                     }
-                    tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", totalBalance)
+
+                    currentTotalBalance = totalBalance
+
+                    if (isBalanceVisible) {
+                        tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+                    }
                 }
     }
 
