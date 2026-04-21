@@ -47,6 +47,12 @@ class MainActivity : AppCompatActivity() {
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
 
+    // Змінні для фільтрів
+    private var currentFilter = "all" // "all", "expense", "income"
+    private lateinit var btnFilterAll: Button
+    private lateinit var btnFilterExpense: Button
+    private lateinit var btnFilterIncome: Button
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -78,6 +84,14 @@ class MainActivity : AppCompatActivity() {
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
+
+        btnFilterAll = findViewById(R.id.btnFilterAll)
+        btnFilterExpense = findViewById(R.id.btnFilterExpense)
+        btnFilterIncome = findViewById(R.id.btnFilterIncome)
+
+        btnFilterAll.setOnClickListener { setFilter("all") }
+        btnFilterExpense.setOnClickListener { setFilter("expense") }
+        btnFilterIncome.setOnClickListener { setFilter("income") }
 
         cvProfile.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
@@ -141,6 +155,32 @@ class MainActivity : AppCompatActivity() {
         balanceListener?.remove()
     }
 
+    private fun setFilter(filterType: String) {
+        currentFilter = filterType
+
+        val transparent = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+
+        btnFilterAll.backgroundTintList = if (filterType == "all") android.content.res.ColorStateList.valueOf(Color.parseColor("#2E7D32")) else transparent
+        btnFilterAll.setTextColor(if (filterType == "all") Color.WHITE else Color.parseColor("#2E7D32"))
+
+        btnFilterExpense.backgroundTintList = if (filterType == "expense") android.content.res.ColorStateList.valueOf(Color.parseColor("#F44336")) else transparent
+        btnFilterExpense.setTextColor(if (filterType == "expense") Color.WHITE else Color.parseColor("#F44336"))
+
+        btnFilterIncome.backgroundTintList = if (filterType == "income") android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50")) else transparent
+        btnFilterIncome.setTextColor(if (filterType == "income") Color.WHITE else Color.parseColor("#4CAF50"))
+
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val filteredList = when (currentFilter) {
+            "expense" -> currentTransactions.filter { it.type == "expense" }
+            "income" -> currentTransactions.filter { it.type == "income" }
+            else -> currentTransactions
+        }
+        transactionAdapter.updateData(filteredList)
+    }
+
     private fun updateProfileIcon() {
         val user = auth.currentUser ?: return
         val nameToUse = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.email ?: "U"
@@ -150,27 +190,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         db.collection("users").document(user.uid).get().addOnSuccessListener { document ->
-                if (document != null && document.contains("avatarBase64")) {
-                    val base64String = document.getString("avatarBase64")
-                    if (!base64String.isNullOrEmpty()) {
-                        try {
-                            val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
-                            val decodedBitmap =
-                                BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
-                            ivProfile.setImageBitmap(decodedBitmap)
-                            ivProfile.visibility = View.VISIBLE
-                            tvProfileLetter.visibility = View.GONE
-                        } catch (e: Exception) {
-                        }
-                    } else {
-                        ivProfile.visibility = View.GONE
-                        tvProfileLetter.visibility = View.VISIBLE
+            if (document != null && document.contains("avatarBase64")) {
+                val base64String = document.getString("avatarBase64")
+                if (!base64String.isNullOrEmpty()) {
+                    try {
+                        val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+                        val decodedBitmap =
+                            BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                        ivProfile.setImageBitmap(decodedBitmap)
+                        ivProfile.visibility = View.VISIBLE
+                        tvProfileLetter.visibility = View.GONE
+                    } catch (e: Exception) {
                     }
                 } else {
                     ivProfile.visibility = View.GONE
                     tvProfileLetter.visibility = View.VISIBLE
                 }
+            } else {
+                ivProfile.visibility = View.GONE
+                tvProfileLetter.visibility = View.VISIBLE
             }
+        }
     }
 
     private fun toggleSelection(id: String) {
@@ -240,7 +280,7 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         currentTransactions = transactionsList
-                        transactionAdapter.updateData(transactionsList)
+                        applyFilter() // Застосовуємо фільтр замість прямого оновлення адаптера
 
                         val validSelectedIds =
                             transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
@@ -340,10 +380,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         batch.commit().addOnSuccessListener {
-                Toast.makeText(this, "Успішно видалено", Toast.LENGTH_SHORT).show()
-                clearSelection()
-            }.addOnFailureListener { e ->
-                Toast.makeText(this, "Помилка видалення: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            Toast.makeText(this, "Успішно видалено", Toast.LENGTH_SHORT).show()
+            clearSelection()
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "Помилка видалення: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 }

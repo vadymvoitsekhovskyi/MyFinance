@@ -30,6 +30,9 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.project.course.myfinance.models.Transaction
 import com.google.android.material.tabs.TabLayout
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -54,10 +57,17 @@ class ProfileActivity : AppCompatActivity() {
     private var currentExportFormat: String = "csv"
     private val gson = Gson()
 
-    private val pickImageLauncher =
-        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let { saveAvatarToFirestoreAsBase64(it) }
+    private val cropImageLauncher = registerForActivityResult(CropImageContract()) { result ->
+        if (result.isSuccessful) {
+            val uriContent = result.uriContent
+            uriContent?.let { saveAvatarToFirestoreAsBase64(it) }
+        } else {
+            val exception = result.error
+            if (exception != null) {
+                Toast.makeText(this, "Помилка редагування фото", Toast.LENGTH_SHORT).show()
+            }
         }
+    }
 
     private val exportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri: Uri? ->
@@ -248,7 +258,7 @@ class ProfileActivity : AppCompatActivity() {
         transactions.forEach { t ->
             val safeCategory = t.category.replace("\"", "\"\"").let { "\"$it\"" }
             val safeComment = t.comment.replace("\"", "\"\"").let { "\"$it\"" }
-            val formattedDate = sdf.format(Date(t.date)) // Форматуємо дату для CSV
+            val formattedDate = sdf.format(Date(t.date))
 
             builder.append("${t.id},${t.type},$safeCategory,${t.amount},$formattedDate,$safeComment\n")
         }
@@ -271,7 +281,6 @@ class ProfileActivity : AppCompatActivity() {
             val tokens = line.split(csvRegex).map { it.trim('\"') }
             if (tokens.size >= 5) {
                 try {
-                    // Пробуємо прочитати новий красивий формат дати, якщо не виходить - пробуємо старий формат (набір цифр)
                     val parsedDateLong = try {
                         sdf.parse(tokens[4])?.time ?: System.currentTimeMillis()
                     } catch (e: Exception) {
@@ -311,23 +320,38 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showAvatarOptionsDialog() {
         val hasPhoto = ivBigProfile.visibility == View.VISIBLE
-        val options = if (hasPhoto) arrayOf("Замінити", "Видалити") else arrayOf("Встановити")
+        val options = if (hasPhoto) arrayOf("Змінити/Редагувати", "Видалити") else arrayOf("Встановити")
 
         AlertDialog.Builder(this)
             .setTitle("Фото профілю")
             .setItems(options) { _, which ->
                 if (hasPhoto) {
                     when (which) {
-                        0 -> pickImageLauncher.launch("image/*")
+                        0 -> launchCropper()
                         1 -> deleteAvatar()
                     }
                 } else {
                     when (which) {
-                        0 -> pickImageLauncher.launch("image/*")
+                        0 -> launchCropper()
                     }
                 }
             }
             .show()
+    }
+
+    private fun launchCropper() {
+        cropImageLauncher.launch(
+            CropImageContractOptions(
+                uri = null, // Відкриє галерею для вибору
+                cropImageOptions = CropImageOptions(
+                    imageSourceIncludeGallery = true,
+                    imageSourceIncludeCamera = true,
+                    aspectRatioX = 1,
+                    aspectRatioY = 1, // Робимо ідеальний квадрат
+                    fixAspectRatio = true
+                )
+            )
+        )
     }
 
     private fun saveAvatarToFirestoreAsBase64(imageUri: Uri) {
@@ -335,13 +359,14 @@ class ProfileActivity : AppCompatActivity() {
         try {
             val inputStream = contentResolver.openInputStream(imageUri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
-            val ratio: Float = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
-            val width = 800
-            val height = (width / ratio).toInt()
-            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+
+            // Фото вже обрізане 1:1 кропером. Задаємо фіксований якісний розмір 800x800
+            val size = 800
+            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, size, size, true)
             val outputStream = ByteArrayOutputStream()
 
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+            // Зберігаємо у високій якості (90%)
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
 
             val byteArray = outputStream.toByteArray()
             val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
@@ -352,7 +377,7 @@ class ProfileActivity : AppCompatActivity() {
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
                     setLoading(false)
-                    Toast.makeText(this, "Фото оновлено", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Фото оновлено!", Toast.LENGTH_SHORT).show()
                     loadAvatarFromFirestore()
                 }
                 .addOnFailureListener {
@@ -414,7 +439,6 @@ class ProfileActivity : AppCompatActivity() {
 
         val input = EditText(this)
         input.hint = "Нове ім'я"
-        // Робимо так, щоб кожне слово починалося з великої літери
         input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
         input.setText(auth.currentUser?.displayName)
         layout.addView(input)

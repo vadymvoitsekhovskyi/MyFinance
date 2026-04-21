@@ -57,4 +57,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.vanniktech:android-image-cropper:4.6.0")
 }
