@@ -22,7 +22,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="Назад"
-            android:src="@android:drawable/ic_menu_revert" />
+            android:src="@drawable/ic_back_arrow" />
 
         <TextView
             android:id="@+id/tvTitle"
@@ -85,7 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="Категорія (Їжа, Транспорт, ЗП)"
-                android:inputType="text"
+                android:inputType="text|textCapSentences"
                 android:minHeight="48dp" />
 
             <EditText
@@ -94,7 +94,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="Коментар (необов'язково)"
-                android:inputType="text"
+                android:inputType="text|textCapSentences"
                 android:minHeight="48dp" />
 
             <Button

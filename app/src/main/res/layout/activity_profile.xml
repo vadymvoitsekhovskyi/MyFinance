@@ -23,7 +23,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="Назад"
-            android:src="@android:drawable/ic_menu_revert" />
+            android:src="@drawable/ic_back_arrow" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -102,98 +102,135 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvEmailDisplay" />
 
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toBottomOf="@id/tvNameDisplay"
+        app:tabIndicatorColor="@color/primary_green"
+        app:tabSelectedTextColor="@color/primary_green"
+        app:tabTextColor="#757575">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Акаунт" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Дані" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Безпека" />
+    </com.google.android.material.tabs.TabLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvNameDisplay">
+        app:layout_constraintTop_toBottomOf="@id/tabLayout">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
             android:paddingHorizontal="24dp"
             android:paddingBottom="24dp">
 
-            <Button
-                android:id="@+id/btnChangeName"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            <!-- Вкладка 1: Акаунт -->
+            <LinearLayout
+                android:id="@+id/layoutAccount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="Змінити ім'я" />
+                android:orientation="vertical">
 
-            <Button
-                android:id="@+id/btnChangeEmail"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                <Button
+                    android:id="@+id/btnChangeName"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="Змінити ім'я" />
+
+                <Button
+                    android:id="@+id/btnChangeEmail"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="Змінити Email" />
+
+                <Button
+                    android:id="@+id/btnChangePassword"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Змінити Пароль" />
+            </LinearLayout>
+
+            <!-- Вкладка 2: Дані -->
+            <LinearLayout
+                android:id="@+id/layoutData"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="Змінити Email" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <Button
-                android:id="@+id/btnChangePassword"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                <Button
+                    android:id="@+id/btnExportData"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="Експорт (CSV / JSON)"
+                    android:textColor="#4CAF50"
+                    app:icon="@android:drawable/ic_menu_save"
+                    app:iconTint="#4CAF50"
+                    app:strokeColor="#4CAF50" />
+
+                <Button
+                    android:id="@+id/btnImportData"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Імпорт (CSV / JSON)"
+                    android:textColor="#FF9800"
+                    app:icon="@android:drawable/ic_menu_upload"
+                    app:iconTint="#FF9800"
+                    app:strokeColor="#FF9800" />
+            </LinearLayout>
+
+            <!-- Вкладка 3: Інше -->
+            <LinearLayout
+                android:id="@+id/layoutSystem"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Змінити Пароль" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginBottom="12dp"
-                android:background="#E0E0E0" />
+                <Button
+                    android:id="@+id/btnLogout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:backgroundTint="#757575"
+                    android:text="Вийти з акаунта" />
 
-            <Button
-                android:id="@+id/btnExportData"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="Експорт (CSV / JSON)"
-                android:textColor="#4CAF50"
-                app:icon="@android:drawable/ic_menu_save"
-                app:iconTint="#4CAF50"
-                app:strokeColor="#4CAF50" />
+                <Button
+                    android:id="@+id/btnDeleteAccount"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="#F44336"
+                    android:text="Видалити акаунт"
+                    android:textColor="#FFFFFF" />
+            </LinearLayout>
 
-            <Button
-                android:id="@+id/btnImportData"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Імпорт (CSV / JSON)"
-                android:textColor="#FF9800"
-                app:icon="@android:drawable/ic_menu_upload"
-                app:iconTint="#FF9800"
-                app:strokeColor="#FF9800" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginBottom="16dp"
-                android:background="#E0E0E0" />
-
-            <Button
-                android:id="@+id/btnLogout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:backgroundTint="#757575"
-                android:text="Вийти з акаунта" />
-
-            <Button
-                android:id="@+id/btnDeleteAccount"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:backgroundTint="#F44336"
-                android:text="Видалити акаунт"
-                android:textColor="#FFFFFF" />
-
-        </LinearLayout>
+        </FrameLayout>
     </ScrollView>
 
     <ProgressBar

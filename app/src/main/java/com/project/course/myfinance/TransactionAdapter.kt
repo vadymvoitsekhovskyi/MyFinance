@@ -130,11 +130,11 @@ class TransactionAdapter(
             holder.cardView.setCardBackgroundColor(Color.WHITE)
         }
 
-        holder.itemView.setOnClickListener {
+        holder.cardView.setOnClickListener {
             onItemClick(transaction)
         }
 
-        holder.itemView.setOnLongClickListener {
+        holder.cardView.setOnLongClickListener {
             onItemLongClick(transaction)
             true
         }

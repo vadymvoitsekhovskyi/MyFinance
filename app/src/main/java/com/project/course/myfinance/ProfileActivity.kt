@@ -29,11 +29,16 @@ import com.google.firebase.firestore.SetOptions
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.project.course.myfinance.models.Transaction
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class ProfileActivity : AppCompatActivity() {
     private val auth = FirebaseAuth.getInstance()
@@ -43,6 +48,9 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var tvEmailDisplay: TextView
     private lateinit var tvNameDisplay: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var layoutAccount: LinearLayout
+    private lateinit var layoutData: LinearLayout
+    private lateinit var layoutSystem: LinearLayout
     private var currentExportFormat: String = "csv"
     private val gson = Gson()
 
@@ -80,6 +88,22 @@ class ProfileActivity : AppCompatActivity() {
         val btnImportData = findViewById<Button>(R.id.btnImportData)
         val btnLogout = findViewById<Button>(R.id.btnLogout)
         val btnDeleteAccount = findViewById<Button>(R.id.btnDeleteAccount)
+
+        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
+        layoutAccount = findViewById(R.id.layoutAccount)
+        layoutData = findViewById(R.id.layoutData)
+        layoutSystem = findViewById(R.id.layoutSystem)
+
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                layoutAccount.visibility = if (tab?.position == 0) View.VISIBLE else View.GONE
+                layoutData.visibility = if (tab?.position == 1) View.VISIBLE else View.GONE
+                layoutSystem.visibility = if (tab?.position == 2) View.VISIBLE else View.GONE
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
         btnBack.setOnClickListener { finish() }
         updateUI()
@@ -218,11 +242,15 @@ class ProfileActivity : AppCompatActivity() {
         val builder = java.lang.StringBuilder()
         builder.append("id,type,category,amount,date,comment\n")
 
+        val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
+
         transactions.forEach { t ->
             val safeCategory = t.category.replace("\"", "\"\"").let { "\"$it\"" }
             val safeComment = t.comment.replace("\"", "\"\"").let { "\"$it\"" }
+            val formattedDate = sdf.format(Date(t.date)) // Форматуємо дату для CSV
 
-            builder.append("${t.id},${t.type},$safeCategory,${t.amount},${t.date},$safeComment\n")
+            builder.append("${t.id},${t.type},$safeCategory,${t.amount},$formattedDate,$safeComment\n")
         }
         return builder.toString()
     }
@@ -233,6 +261,8 @@ class ProfileActivity : AppCompatActivity() {
         if (lines.size <= 1) return list
 
         val csvRegex = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+        val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
 
         for (i in 1 until lines.size) {
             val line = lines[i].trim()
@@ -241,13 +271,20 @@ class ProfileActivity : AppCompatActivity() {
             val tokens = line.split(csvRegex).map { it.trim('\"') }
             if (tokens.size >= 5) {
                 try {
+                    // Пробуємо прочитати новий красивий формат дати, якщо не виходить - пробуємо старий формат (набір цифр)
+                    val parsedDateLong = try {
+                        sdf.parse(tokens[4])?.time ?: System.currentTimeMillis()
+                    } catch (e: Exception) {
+                        tokens[4].toLongOrNull() ?: System.currentTimeMillis()
+                    }
+
                     list.add(
                         Transaction(
                             id = tokens[0],
                             type = tokens[1],
                             category = tokens[2],
                             amount = tokens[3].toDoubleOrNull() ?: 0.0,
-                            date = tokens[4].toLongOrNull() ?: System.currentTimeMillis(),
+                            date = parsedDateLong,
                             comment = if (tokens.size > 5) tokens[5] else ""
                         )
                     )
@@ -377,6 +414,8 @@ class ProfileActivity : AppCompatActivity() {
 
         val input = EditText(this)
         input.hint = "Нове ім'я"
+        // Робимо так, щоб кожне слово починалося з великої літери
+        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
         input.setText(auth.currentUser?.displayName)
         layout.addView(input)
 
