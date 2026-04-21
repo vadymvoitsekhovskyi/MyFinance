@@ -25,6 +25,7 @@ import android.graphics.drawable.Drawable
 import androidx.vectordrawable.graphics.drawable.Animatable2Compat
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
@@ -106,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         ivBalanceLogo = findViewById(R.id.ivBalanceLogo)
 
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
-        val cardBalance = findViewById<CardView>(R.id.cardBalance)
+        val layoutBalanceText = findViewById<LinearLayout>(R.id.layoutBalanceText)
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
@@ -117,7 +118,7 @@ class MainActivity : AppCompatActivity() {
 
         tvTotalBalance.text = "****** ₴"
 
-        cardBalance.setOnClickListener {
+        layoutBalanceText.setOnClickListener {
             toggleBalanceVisibility()
         }
 
@@ -199,19 +200,15 @@ class MainActivity : AppCompatActivity() {
             tvTotalBalance.text = "****** ₴"
         } else {
             isBalanceVisible = true
-            tvTotalBalance.text = "..."
-
-            lifecycleScope.launch {
-                delay(300)
-                if (isBalanceVisible) {
-                    tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
-                }
-            }
+            tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
         }
     }
 
     private fun startAnimatedIconsLoop() {
         if (animatedIcons.isNotEmpty()) {
+            animatedIcons.forEach {
+                Glide.with(this).asGif().load(it).preload()
+            }
             playNextAnimatedIcon(0)
         }
     }
@@ -219,40 +216,48 @@ class MainActivity : AppCompatActivity() {
     private fun playNextAnimatedIcon(currentIndex: Int) {
         if (isDestroyed || isFinishing) return
 
-        Glide.with(this)
+        var request = Glide.with(this)
             .asGif()
             .load(animatedIcons[currentIndex])
-            .listener(object : RequestListener<GifDrawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<GifDrawable>,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    ivBalanceLogo.postDelayed({
+
+        if (ivBalanceLogo.drawable != null) {
+            request = request.placeholder(ivBalanceLogo.drawable)
+        }
+
+        if (currentIndex == 0) {
+            request = request.transition(DrawableTransitionOptions.withCrossFade(400))
+        }
+
+        request.listener(object : RequestListener<GifDrawable> {
+            override fun onLoadFailed(
+                e: GlideException?,
+                model: Any?,
+                target: Target<GifDrawable>,
+                isFirstResource: Boolean
+            ): Boolean {
+                ivBalanceLogo.postDelayed({
+                    playNextAnimatedIcon((currentIndex + 1) % animatedIcons.size)
+                }, 1000)
+                return false
+            }
+
+            override fun onResourceReady(
+                resource: GifDrawable,
+                model: Any,
+                target: Target<GifDrawable>?,
+                dataSource: DataSource,
+                isFirstResource: Boolean
+            ): Boolean {
+                resource.setLoopCount(1)
+                resource.registerAnimationCallback(object : Animatable2Compat.AnimationCallback() {
+                    override fun onAnimationEnd(drawable: Drawable?) {
+                        resource.unregisterAnimationCallback(this)
                         playNextAnimatedIcon((currentIndex + 1) % animatedIcons.size)
-                    }, 0)
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: GifDrawable,
-                    model: Any,
-                    target: Target<GifDrawable>?,
-                    dataSource: DataSource,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    resource.setLoopCount(1)
-
-                    resource.registerAnimationCallback(object : Animatable2Compat.AnimationCallback() {
-                        override fun onAnimationEnd(drawable: Drawable?) {
-                            resource.unregisterAnimationCallback(this)
-                            playNextAnimatedIcon((currentIndex + 1) % animatedIcons.size)
-                        }
-                    })
-                    return false
-                }
-            })
+                    }
+                })
+                return false
+            }
+        })
             .into(ivBalanceLogo)
     }
 
