@@ -70,6 +70,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         val fabAddTransaction = findViewById<FloatingActionButton>(R.id.fabAddTransaction)
+        val scrollButtonsContainer = findViewById<LinearLayout>(R.id.scrollButtonsContainer)
+        val fabScrollUp = findViewById<FloatingActionButton>(R.id.fabScrollUp)
+        val fabScrollDown = findViewById<FloatingActionButton>(R.id.fabScrollDown)
+
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
         topPanel = findViewById(R.id.topPanel)
@@ -95,6 +99,17 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
 
+        fabScrollUp.setOnClickListener {
+            rvTransactions.smoothScrollToPosition(0)
+        }
+
+        fabScrollDown.setOnClickListener {
+            val count = transactionAdapter.itemCount
+            if (count > 0) {
+                rvTransactions.smoothScrollToPosition(count - 1)
+            }
+        }
+
         transactionAdapter = TransactionAdapter(emptyList(), onItemClick = { transaction ->
             if (transactionAdapter.selectedIds.isNotEmpty()) {
                 toggleSelection(transaction.id)
@@ -109,6 +124,16 @@ class MainActivity : AppCompatActivity() {
         rvTransactions.adapter = transactionAdapter
 
         rvTransactions.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+
+                if (recyclerView.computeVerticalScrollOffset() > 0) {
+                    scrollButtonsContainer.visibility = View.VISIBLE
+                } else {
+                    scrollButtonsContainer.visibility = View.GONE
+                }
+            }
+
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
 
