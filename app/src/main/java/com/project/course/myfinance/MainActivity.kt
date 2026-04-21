@@ -17,8 +17,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import android.graphics.drawable.Drawable
+import androidx.vectordrawable.graphics.drawable.Animatable2Compat
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.gif.GifDrawable
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
@@ -26,6 +35,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.project.course.myfinance.models.Transaction
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvSelectedCount: TextView
     private lateinit var tvProfileLetter: TextView
     private lateinit var ivProfile: ImageView
+    private lateinit var ivBalanceLogo: ImageView
     private var currentTransactions: List<Transaction> = emptyList()
     private var currentLimit: Long = 10L
     private var snapshotListener: ListenerRegistration? = null
@@ -50,6 +63,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnFilterAll: Button
     private lateinit var btnFilterExpense: Button
     private lateinit var btnFilterIncome: Button
+
+    private val animatedIcons = listOf(
+        R.drawable.icon_anim_1,
+        R.drawable.icon_anim_2,
+        R.drawable.icon_anim_3
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,6 +100,7 @@ class MainActivity : AppCompatActivity() {
         tvSelectedCount = findViewById(R.id.tvSelectedCount)
         tvProfileLetter = findViewById(R.id.tvProfileLetter)
         ivProfile = findViewById(R.id.ivProfile)
+        ivBalanceLogo = findViewById(R.id.ivBalanceLogo)
 
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
@@ -160,6 +180,53 @@ class MainActivity : AppCompatActivity() {
         loadTotalBalance()
         loadTransactions()
         updateProfileIcon()
+        startAnimatedIconsLoop()
+    }
+
+    private fun startAnimatedIconsLoop() {
+        if (animatedIcons.isNotEmpty()) {
+            playNextAnimatedIcon(0)
+        }
+    }
+
+    private fun playNextAnimatedIcon(currentIndex: Int) {
+        if (isDestroyed || isFinishing) return
+
+        Glide.with(this)
+            .asGif()
+            .load(animatedIcons[currentIndex])
+            .listener(object : RequestListener<GifDrawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<GifDrawable>,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    ivBalanceLogo.postDelayed({
+                        playNextAnimatedIcon((currentIndex + 1) % animatedIcons.size)
+                    }, 0)
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: GifDrawable,
+                    model: Any,
+                    target: Target<GifDrawable>?,
+                    dataSource: DataSource,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    resource.setLoopCount(1)
+
+                    resource.registerAnimationCallback(object : Animatable2Compat.AnimationCallback() {
+                        override fun onAnimationEnd(drawable: Drawable?) {
+                            resource.unregisterAnimationCallback(this)
+                            playNextAnimatedIcon((currentIndex + 1) % animatedIcons.size)
+                        }
+                    })
+                    return false
+                }
+            })
+            .into(ivBalanceLogo)
     }
 
     override fun onResume() {
