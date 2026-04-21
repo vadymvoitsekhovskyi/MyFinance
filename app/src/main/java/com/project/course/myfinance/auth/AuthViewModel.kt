@@ -57,4 +57,20 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+    fun googleSignIn(idToken: String) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                repository.googleSignIn(idToken)
+                _authState.value = AuthState.Success
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.message ?: "Помилка авторизації через Google")
+            }
+        }
+    }
+
+    fun resetState() {
+        _authState.value = AuthState.Idle
+    }
 }

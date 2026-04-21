@@ -1,5 +1,6 @@
 package com.project.course.myfinance
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
@@ -11,9 +12,14 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.project.course.myfinance.auth.AuthState
 import com.project.course.myfinance.auth.AuthViewModel
@@ -21,6 +27,24 @@ import com.project.course.myfinance.auth.AuthViewModel
 class LoginActivity : AppCompatActivity() {
     private lateinit var viewModel: AuthViewModel
     private val auth = FirebaseAuth.getInstance()
+    private lateinit var googleSignInClient: GoogleSignInClient
+
+    private val googleSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    viewModel.googleSignIn(idToken)
+                } else {
+                    Toast.makeText(this, "Не вдалося отримати токен Google", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: ApiException) {
+                Toast.makeText(this, "Помилка Google Sign In: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,10 +52,17 @@ class LoginActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[AuthViewModel::class.java]
 
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
         val etEmail = findViewById<EditText>(R.id.etEmail)
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val cbShowPassword = findViewById<CheckBox>(R.id.cbShowPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
+        val btnGoogleSignIn = findViewById<Button>(R.id.btnGoogleSignIn)
         val tvGoToRegister = findViewById<TextView>(R.id.tvGoToRegister)
         val tvForgotPassword = findViewById<TextView>(R.id.tvForgotPassword)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
@@ -48,6 +79,7 @@ class LoginActivity : AppCompatActivity() {
                 is AuthState.Loading -> {
                     progressBar.visibility = View.VISIBLE
                     btnLogin.isEnabled = false
+                    btnGoogleSignIn.isEnabled = false
                 }
 
                 is AuthState.Success -> {
@@ -59,12 +91,15 @@ class LoginActivity : AppCompatActivity() {
                 is AuthState.Error -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
+                    btnGoogleSignIn.isEnabled = true
                     Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
+                    viewModel.resetState()
                 }
 
                 is AuthState.Idle -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
+                    btnGoogleSignIn.isEnabled = true
                 }
             }
         }
@@ -73,6 +108,13 @@ class LoginActivity : AppCompatActivity() {
             val email = etEmail.text.toString()
             val password = etPassword.text.toString()
             viewModel.login(email, password)
+        }
+
+        btnGoogleSignIn.setOnClickListener {
+            googleSignInClient.signOut().addOnCompleteListener {
+                val signInIntent = googleSignInClient.signInIntent
+                googleSignInLauncher.launch(signInIntent)
+            }
         }
 
         tvGoToRegister.setOnClickListener {

@@ -1,5 +1,6 @@
 package com.project.course.myfinance
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -20,8 +21,18 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.lifecycle.lifecycleScope
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.material.tabs.TabLayout
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -29,10 +40,6 @@ import com.google.firebase.firestore.SetOptions
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.project.course.myfinance.models.Transaction
-import com.google.android.material.tabs.TabLayout
-import com.canhub.cropper.CropImageContract
-import com.canhub.cropper.CropImageContractOptions
-import com.canhub.cropper.CropImageOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -57,6 +64,11 @@ class ProfileActivity : AppCompatActivity() {
     private var currentExportFormat: String = "csv"
     private val gson = Gson()
 
+    // ДОДАНО ДЛЯ GOOGLE RE-AUTH
+    private val WEB_CLIENT_ID = "789190818561-pfb6m4vr207b90s5r1ku8pm07bl070i2.apps.googleusercontent.com"
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private var onGoogleReAuthSuccess: (() -> Unit)? = null
+
     private val cropImageLauncher = registerForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
             val uriContent = result.uriContent
@@ -79,9 +91,42 @@ class ProfileActivity : AppCompatActivity() {
             uri?.let { performImport(it) }
         }
 
+    // ДОДАНО: Лаунчер для повторної Google авторизації
+    private val googleReAuthLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        setLoading(false)
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    setLoading(true)
+                    val credential = GoogleAuthProvider.getCredential(idToken, null)
+                    auth.currentUser?.reauthenticate(credential)?.addOnCompleteListener { reAuthTask ->
+                        if (reAuthTask.isSuccessful) {
+                            onGoogleReAuthSuccess?.invoke()
+                        } else {
+                            setLoading(false)
+                            Toast.makeText(this, "Помилка перевірки акаунта", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: ApiException) {
+                Toast.makeText(this, "Вхід скасовано або помилка", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+
+        // Ініціалізація Google Client для Re-Auth
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(WEB_CLIENT_ID)
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
 
         val btnBack = findViewById<ImageView>(R.id.btnBack)
         tvBigProfileLetter = findViewById(R.id.tvBigProfileLetter)
@@ -103,6 +148,11 @@ class ProfileActivity : AppCompatActivity() {
         layoutAccount = findViewById(R.id.layoutAccount)
         layoutData = findViewById(R.id.layoutData)
         layoutSystem = findViewById(R.id.layoutSystem)
+
+        // Динамічна зміна назви кнопки пароля
+        val user = auth.currentUser
+        val hasPassword = user?.providerData?.any { it.providerId == EmailAuthProvider.PROVIDER_ID } == true
+        btnChangePassword.text = if (hasPassword) "Змінити пароль" else "Створити пароль"
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -511,6 +561,10 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeEmailDialog() {
+        val user = auth.currentUser ?: return
+        // Перевіряємо, чи входив користувач колись через пароль
+        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(50, 40, 50, 10)
@@ -520,20 +574,23 @@ class ProfileActivity : AppCompatActivity() {
         emailInput.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         layout.addView(emailInput)
 
-        val passInput = EditText(this)
-        passInput.hint = "Поточний пароль"
-        passInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        layout.addView(passInput)
+        var passInput: EditText? = null
+        if (hasPassword) {
+            passInput = EditText(this)
+            passInput.hint = "Поточний пароль"
+            passInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            layout.addView(passInput)
 
-        val cbShowPassword = android.widget.CheckBox(this)
-        cbShowPassword.text = "Показати пароль"
-        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type =
-                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            passInput.inputType = type
-            passInput.setSelection(passInput.text.length)
+            val cbShowPassword = android.widget.CheckBox(this)
+            cbShowPassword.text = "Показати пароль"
+            cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
+                val type =
+                    if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                passInput.inputType = type
+                passInput.setSelection(passInput.text.length)
+            }
+            layout.addView(cbShowPassword)
         }
-        layout.addView(cbShowPassword)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Змінити email")
@@ -546,76 +603,91 @@ class ProfileActivity : AppCompatActivity() {
             val btnSave = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             btnSave.setOnClickListener {
                 val newEmail = emailInput.text.toString().trim()
-                val password = passInput.text.toString().trim()
+                if (newEmail.isEmpty()) {
+                    Toast.makeText(this, "Введіть новий email", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
 
-                if (newEmail.isNotEmpty() && password.isNotEmpty()) {
-                    reAuthenticateAndExecute(password, { user ->
-                        user.verifyBeforeUpdateEmail(newEmail).addOnCompleteListener { task ->
-                            setLoading(false)
-                            if (task.isSuccessful) {
-                                Toast.makeText(
-                                    this,
-                                    "Лист для підтвердження відправлено на новий email. Перезайдіть після підтвердження.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                dialog.dismiss()
-                                auth.signOut()
-                                goToLogin()
-                            } else {
-                                Toast.makeText(
-                                    this,
-                                    "Помилка: ${task.exception?.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }, {})
+                if (hasPassword) {
+                    val password = passInput?.text.toString().trim()
+                    if (password.isNotEmpty()) {
+                        reAuthenticateAndExecute(password, { u ->
+                            updateEmail(u, newEmail, dialog)
+                        }, {})
+                    } else {
+                        Toast.makeText(this, "Введіть пароль", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    Toast.makeText(this, "Заповніть всі поля", Toast.LENGTH_SHORT).show()
+                    // Якщо тільки Google – просимо підтвердження через Google
+                    setLoading(true)
+                    onGoogleReAuthSuccess = {
+                        updateEmail(user, newEmail, dialog)
+                    }
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        googleReAuthLauncher.launch(googleSignInClient.signInIntent)
+                    }
                 }
             }
         }
         dialog.show()
     }
 
+    private fun updateEmail(user: FirebaseUser, newEmail: String, dialog: AlertDialog) {
+        user.verifyBeforeUpdateEmail(newEmail).addOnCompleteListener { task ->
+            setLoading(false)
+            if (task.isSuccessful) {
+                Toast.makeText(this, "Лист для підтвердження відправлено на новий email. Перезайдіть після підтвердження.", Toast.LENGTH_LONG).show()
+                dialog.dismiss()
+                auth.signOut()
+                goToLogin()
+            } else {
+                Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun showChangePasswordDialog() {
+        val user = auth.currentUser ?: return
+        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(50, 40, 50, 10)
 
-        val oldPassInput = EditText(this)
-        oldPassInput.hint = "Поточний пароль"
-        oldPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        layout.addView(oldPassInput)
+        var oldPassInput: EditText? = null
+        if (hasPassword) {
+            oldPassInput = EditText(this)
+            oldPassInput.hint = "Поточний пароль"
+            oldPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            layout.addView(oldPassInput)
+        }
 
         val newPassInput = EditText(this)
-        newPassInput.hint = "Новий пароль"
+        newPassInput.hint = if (hasPassword) "Новий пароль" else "Створіть пароль"
         newPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(newPassInput)
 
         val confirmPassInput = EditText(this)
-        confirmPassInput.hint = "Підтвердіть новий пароль"
-        confirmPassInput.inputType =
-            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        confirmPassInput.hint = "Підтвердіть пароль"
+        confirmPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(confirmPassInput)
 
         val cbShowPassword = android.widget.CheckBox(this)
         cbShowPassword.text = "Показати паролі"
         cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type =
-                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            oldPassInput.inputType = type
+            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            oldPassInput?.inputType = type
             newPassInput.inputType = type
             confirmPassInput.inputType = type
 
-            oldPassInput.setSelection(oldPassInput.text.length)
+            oldPassInput?.setSelection(oldPassInput.text.length)
             newPassInput.setSelection(newPassInput.text.length)
             confirmPassInput.setSelection(confirmPassInput.text.length)
         }
         layout.addView(cbShowPassword)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Змінити пароль")
+            .setTitle(if (hasPassword) "Змінити пароль" else "Створити пароль")
             .setView(layout)
             .setPositiveButton("Зберегти", null)
             .setNegativeButton("Скасувати", null)
@@ -624,17 +696,16 @@ class ProfileActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             val btnSave = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             btnSave.setOnClickListener {
-                val oldPass = oldPassInput.text.toString().trim()
+                val oldPass = oldPassInput?.text?.toString()?.trim() ?: ""
                 val newPass = newPassInput.text.toString().trim()
                 val confirmPass = confirmPassInput.text.toString().trim()
 
-                if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+                if ((hasPassword && oldPass.isEmpty()) || newPass.isEmpty() || confirmPass.isEmpty()) {
                     Toast.makeText(this, "Заповніть всі поля", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
                 if (newPass.length < 6) {
-                    Toast.makeText(this, "Новий пароль має бути від 6 символів", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(this, "Пароль має бути від 6 символів", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
                 if (newPass != confirmPass) {
@@ -642,27 +713,39 @@ class ProfileActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                reAuthenticateAndExecute(oldPass, { user ->
-                    user.updatePassword(newPass).addOnCompleteListener { task ->
-                        setLoading(false)
-                        if (task.isSuccessful) {
-                            Toast.makeText(
-                                this,
-                                "Пароль оновлено! Увійдіть знову.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            dialog.dismiss()
-                            auth.signOut()
-                            goToLogin()
-                        } else {
-                            Toast.makeText(
-                                this,
-                                "Помилка: ${task.exception?.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
+                if (hasPassword) {
+                    reAuthenticateAndExecute(oldPass, { u ->
+                        u.updatePassword(newPass).addOnCompleteListener { task ->
+                            setLoading(false)
+                            if (task.isSuccessful) {
+                                Toast.makeText(this, "Пароль оновлено! Увійдіть знову.", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                                auth.signOut()
+                                goToLogin()
+                            } else {
+                                Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }, {})
+                } else {
+                    // Якщо пароля немає, підтверджуємо через Google перед створенням
+                    setLoading(true)
+                    onGoogleReAuthSuccess = {
+                        user.updatePassword(newPass).addOnCompleteListener { task ->
+                            setLoading(false)
+                            if (task.isSuccessful) {
+                                Toast.makeText(this, "Пароль створено! Тепер можна входити і за паролем.", Toast.LENGTH_LONG).show()
+                                findViewById<Button>(R.id.btnChangePassword).text = "Змінити пароль"
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(this, "Помилка: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
-                }, {})
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        googleReAuthLauncher.launch(googleSignInClient.signInIntent)
+                    }
+                }
             }
         }
         dialog.show()
@@ -674,6 +757,7 @@ class ProfileActivity : AppCompatActivity() {
             .setMessage("Ви впевнені, що хочете вийти з акаунта?")
             .setPositiveButton("Вийти") { _, _ ->
                 auth.signOut()
+                googleSignInClient.signOut() // Розлогінюємось також із Google клієнта
                 goToLogin()
             }
             .setNegativeButton("Скасувати", null)
@@ -681,53 +765,74 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showDeleteAccountDialog() {
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
+        val user = auth.currentUser ?: return
+        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
 
-        val input = EditText(this)
-        input.hint = "Введіть пароль для підтвердження"
-        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        layout.addView(input)
+        if (hasPassword) {
+            val layout = LinearLayout(this)
+            layout.orientation = LinearLayout.VERTICAL
+            layout.setPadding(50, 40, 50, 10)
 
-        val cbShowPassword = android.widget.CheckBox(this)
-        cbShowPassword.text = "Показати пароль"
-        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type =
-                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            input.inputType = type
-            input.setSelection(input.text.length)
-        }
-        layout.addView(cbShowPassword)
+            val input = EditText(this)
+            input.hint = "Введіть пароль для підтвердження"
+            input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            layout.addView(input)
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Видалити акаунт")
-            .setMessage("Увага! Це назавжди видалить ваш акаунт та всі ваші транзакції.")
-            .setView(layout)
-            .setPositiveButton("Видалити", null)
-            .setNegativeButton("Скасувати", null)
-            .create()
+            val cbShowPassword = android.widget.CheckBox(this)
+            cbShowPassword.text = "Показати пароль"
+            cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
+                val type =
+                    if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                input.inputType = type
+                input.setSelection(input.text.length)
+            }
+            layout.addView(cbShowPassword)
 
-        dialog.setOnShowListener {
-            val btnDelete = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            btnDelete.setOnClickListener {
-                val password = input.text.toString().trim()
-                if (password.isNotEmpty()) {
-                    reAuthenticateAndExecute(password, { user ->
-                        deleteUserDataAndAccount()
-                        dialog.dismiss()
-                    }, {})
-                } else {
-                    Toast.makeText(this, "Пароль обов'язковий", Toast.LENGTH_SHORT).show()
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Видалити акаунт")
+                .setMessage("Увага! Це назавжди видалить ваш акаунт та всі ваші транзакції.")
+                .setView(layout)
+                .setPositiveButton("Видалити", null)
+                .setNegativeButton("Скасувати", null)
+                .create()
+
+            dialog.setOnShowListener {
+                val btnDelete = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                btnDelete.setOnClickListener {
+                    val password = input.text.toString().trim()
+                    if (password.isNotEmpty()) {
+                        reAuthenticateAndExecute(password, { _ ->
+                            deleteUserDataAndAccount()
+                            dialog.dismiss()
+                        }, {})
+                    } else {
+                        Toast.makeText(this, "Пароль обов'язковий", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
+            dialog.show()
+        } else {
+            // ЛОГІКА ДЛЯ GOOGLE: Не питаємо пароль, а просимо перепідтвердити вхід через Google
+            AlertDialog.Builder(this)
+                .setTitle("Видалити акаунт")
+                .setMessage("Увага! Це назавжди видалить ваш акаунт та всі ваші транзакції.\n\nДля підтвердження необхідно буде вибрати ваш Google акаунт.")
+                .setPositiveButton("Підтвердити") { _, _ ->
+                    setLoading(true)
+                    onGoogleReAuthSuccess = {
+                        deleteUserDataAndAccount()
+                    }
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        googleReAuthLauncher.launch(googleSignInClient.signInIntent)
+                    }
+                }
+                .setNegativeButton("Скасувати", null)
+                .show()
         }
-        dialog.show()
     }
 
     private fun reAuthenticateAndExecute(
         password: String,
-        onSuccess: (com.google.firebase.auth.FirebaseUser) -> Unit,
+        onSuccess: (FirebaseUser) -> Unit,
         onFailure: () -> Unit
     ) {
         val user = auth.currentUser
@@ -750,6 +855,7 @@ class ProfileActivity : AppCompatActivity() {
     private fun deleteUserDataAndAccount() {
         val user = auth.currentUser ?: return
         val uid = user.uid
+        setLoading(true)
 
         db.collection("users").document(uid).collection("transactions").get()
             .addOnSuccessListener { snapshot ->
@@ -766,6 +872,7 @@ class ProfileActivity : AppCompatActivity() {
                         if (task.isSuccessful) {
                             Toast.makeText(this, "Акаунт успішно видалено", Toast.LENGTH_SHORT)
                                 .show()
+                            googleSignInClient.signOut()
                             goToLogin()
                         } else {
                             Toast.makeText(

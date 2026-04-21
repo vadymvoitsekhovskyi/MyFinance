@@ -2,6 +2,7 @@ package com.project.course.myfinance.auth
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository {
@@ -27,6 +28,12 @@ class AuthRepository {
 
     suspend fun login(email: String, password: String): FirebaseUser? {
         val result = auth.signInWithEmailAndPassword(email, password).await()
+        return result.user
+    }
+
+    suspend fun googleSignIn(idToken: String): FirebaseUser? {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val result = auth.signInWithCredential(credential).await()
         return result.user
     }
 
