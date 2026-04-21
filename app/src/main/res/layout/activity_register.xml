@@ -81,8 +81,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Через Google"
-        app:icon="@android:drawable/ic_menu_myplaces"
+        android:text="Увійти через Google"
+        app:icon="@drawable/ic_google"
+        app:iconTint="@null"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnRegister" />

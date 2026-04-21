@@ -2,6 +2,8 @@ package com.project.course.myfinance
 
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -23,6 +25,12 @@ class AddTransactionActivity : AppCompatActivity() {
     private var editingTransactionId: String? = null
     private var originalDate: Long = 0L
 
+    // Список категорій за замовчуванням
+    private val categories = arrayOf(
+        "Продукти", "Транспорт", "Спорт", "Техніка", "Дім",
+        "Здоров'я", "Одяг", "Кафе/Ресторани", "Зарплата", "Подарунки", "Інше"
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_transaction)
@@ -33,12 +41,16 @@ class AddTransactionActivity : AppCompatActivity() {
         val rbExpense = findViewById<RadioButton>(R.id.rbExpense)
         val rbIncome = findViewById<RadioButton>(R.id.rbIncome)
         val etAmount = findViewById<EditText>(R.id.etAmount)
-        val etCategory = findViewById<EditText>(R.id.etCategory)
+        val etCategory = findViewById<AutoCompleteTextView>(R.id.etCategory)
         val etComment = findViewById<EditText>(R.id.etComment)
         val btnSave = findViewById<Button>(R.id.btnSaveTransaction)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         btnBack.setOnClickListener { finish() }
+
+        // Налаштування випадаючого списку категорій
+        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, categories)
+        etCategory.setAdapter(adapter)
 
         editingTransactionId = intent.getStringExtra("EXTRA_ID")
         if (editingTransactionId != null) {
@@ -53,7 +65,7 @@ class AddTransactionActivity : AppCompatActivity() {
 
             if (type == "income") rbIncome.isChecked = true else rbExpense.isChecked = true
             etAmount.setText(amount.toString())
-            etCategory.setText(category)
+            etCategory.setText(category, false) // false - щоб не відкривався список автоматично при заповненні
             etComment.setText(comment)
         }
 
@@ -64,7 +76,7 @@ class AddTransactionActivity : AppCompatActivity() {
             val type = if (rbExpense.isChecked) "expense" else "income"
 
             if (amountText.isBlank() || category.isBlank()) {
-                Toast.makeText(this, "Введіть суму та категорію", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Введіть суму та оберіть категорію", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
