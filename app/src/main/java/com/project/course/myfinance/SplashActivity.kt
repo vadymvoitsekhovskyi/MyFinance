@@ -20,7 +20,6 @@ class SplashActivity : AppCompatActivity() {
         val ivLogo = findViewById<ImageView>(R.id.ivSplashLogo)
         val tvTitle = findViewById<TextView>(R.id.tvSplashTitle)
 
-        // 1. Встановлюємо початковий стан (невидимі та зміщені/зменшені)
         ivLogo.alpha = 0f
         ivLogo.scaleX = 0.3f
         ivLogo.scaleY = 0.3f
@@ -28,34 +27,28 @@ class SplashActivity : AppCompatActivity() {
         tvTitle.alpha = 0f
         tvTitle.translationY = 50f
 
-        // 2. Анімація логотипа (збільшення + плавна поява + пружинка)
         ivLogo.animate()
             .alpha(1f)
             .scaleX(1f)
             .scaleY(1f)
             .setDuration(1000)
-            .setInterpolator(OvershootInterpolator()) // Робить прикольний ефект відскоку
+            .setInterpolator(OvershootInterpolator())
             .start()
 
-        // 3. Анімація тексту (виїжджає знизу трохи пізніше за логотип)
         tvTitle.animate()
             .alpha(1f)
             .translationY(0f)
             .setDuration(800)
-            .setStartDelay(400) // Чекаємо 400 мілісекунд перед стартом
+            .setStartDelay(400)
             .start()
 
-        // 4. Затримка 2.5 секунди, перевірка авторизації та перехід
         Handler(Looper.getMainLooper()).postDelayed({
             val currentUser = FirebaseAuth.getInstance().currentUser
             if (currentUser != null) {
-                // Якщо вже увійшов - кидаємо на головний екран
                 startActivity(Intent(this, MainActivity::class.java))
             } else {
-                // Якщо ні - на екран логіну
                 startActivity(Intent(this, LoginActivity::class.java))
             }
-            // Закриваємо SplashActivity, щоб користувач не міг повернутись сюди кнопкою "Назад"
             finish()
         }, 2500)
     }

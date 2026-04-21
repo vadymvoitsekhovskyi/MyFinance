@@ -342,12 +342,12 @@ class ProfileActivity : AppCompatActivity() {
     private fun launchCropper() {
         cropImageLauncher.launch(
             CropImageContractOptions(
-                uri = null, // Відкриє галерею для вибору
+                uri = null,
                 cropImageOptions = CropImageOptions(
                     imageSourceIncludeGallery = true,
                     imageSourceIncludeCamera = true,
                     aspectRatioX = 1,
-                    aspectRatioY = 1, // Робимо ідеальний квадрат
+                    aspectRatioY = 1,
                     fixAspectRatio = true
                 )
             )
@@ -359,15 +359,10 @@ class ProfileActivity : AppCompatActivity() {
         try {
             val inputStream = contentResolver.openInputStream(imageUri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
-
-            // Фото вже обрізане 1:1 кропером. Задаємо фіксований якісний розмір 800x800
             val size = 800
             val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, size, size, true)
             val outputStream = ByteArrayOutputStream()
-
-            // Зберігаємо у високій якості (90%)
             scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-
             val byteArray = outputStream.toByteArray()
             val base64String = Base64.encodeToString(byteArray, Base64.DEFAULT)
             val user = auth.currentUser ?: return
@@ -377,7 +372,7 @@ class ProfileActivity : AppCompatActivity() {
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
                     setLoading(false)
-                    Toast.makeText(this, "Фото оновлено!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Фото оновлено", Toast.LENGTH_SHORT).show()
                     loadAvatarFromFirestore()
                 }
                 .addOnFailureListener {
@@ -480,7 +475,7 @@ class ProfileActivity : AppCompatActivity() {
         layout.setPadding(50, 40, 50, 10)
 
         val emailInput = EditText(this)
-        emailInput.hint = "Новий Email"
+        emailInput.hint = "Новий email"
         emailInput.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         layout.addView(emailInput)
 
@@ -500,7 +495,7 @@ class ProfileActivity : AppCompatActivity() {
         layout.addView(cbShowPassword)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Змінити Email")
+            .setTitle("Змінити email")
             .setView(layout)
             .setPositiveButton("Зберегти", null)
             .setNegativeButton("Скасувати", null)
@@ -553,7 +548,7 @@ class ProfileActivity : AppCompatActivity() {
         layout.addView(oldPassInput)
 
         val newPassInput = EditText(this)
-        newPassInput.hint = "Новий пароль (від 6 символів)"
+        newPassInput.hint = "Новий пароль"
         newPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         layout.addView(newPassInput)
 

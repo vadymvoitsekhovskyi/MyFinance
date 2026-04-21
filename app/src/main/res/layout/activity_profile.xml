@@ -20,8 +20,8 @@
 
         <ImageView
             android:id="@+id/btnBack"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:contentDescription="Назад"
             android:src="@drawable/ic_back_arrow" />
 
@@ -36,14 +36,14 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cvBigProfile"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
         android:layout_marginTop="16dp"
         android:clickable="true"
         android:focusable="true"
         android:foreground="?android:attr/selectableItemBackground"
         app:cardBackgroundColor="@color/primary_green"
-        app:cardCornerRadius="60dp"
+        app:cardCornerRadius="200dp"
         app:cardElevation="4dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -76,14 +76,15 @@
         android:src="@android:drawable/ic_menu_edit"
         app:layout_constraintBottom_toBottomOf="@id/cvBigProfile"
         app:layout_constraintEnd_toEndOf="@id/cvBigProfile"
-        app:tint="#4CAF50" />
+        app:tint="#4CAF50"
+        android:layout_marginEnd="24dp" />
 
     <TextView
         android:id="@+id/tvEmailDisplay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="user@email.com"
+        android:text="user@gmail.com"
         android:textColor="#757575"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -142,7 +143,6 @@
             android:paddingHorizontal="24dp"
             android:paddingBottom="24dp">
 
-            <!-- Вкладка 1: Акаунт -->
             <LinearLayout
                 android:id="@+id/layoutAccount"
                 android:layout_width="match_parent"
@@ -163,17 +163,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:text="Змінити Email" />
+                    android:text="Змінити email" />
 
                 <Button
                     android:id="@+id/btnChangePassword"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Змінити Пароль" />
+                    android:text="Змінити пароль" />
             </LinearLayout>
 
-            <!-- Вкладка 2: Дані -->
             <LinearLayout
                 android:id="@+id/layoutData"
                 android:layout_width="match_parent"
@@ -187,7 +186,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:text="Експорт (CSV / JSON)"
+                    android:text="Експорт"
                     android:textColor="#4CAF50"
                     app:icon="@android:drawable/ic_menu_save"
                     app:iconTint="#4CAF50"
@@ -198,14 +197,13 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Імпорт (CSV / JSON)"
+                    android:text="Імпорт"
                     android:textColor="#FF9800"
                     app:icon="@android:drawable/ic_menu_upload"
                     app:iconTint="#FF9800"
                     app:strokeColor="#FF9800" />
             </LinearLayout>
 
-            <!-- Вкладка 3: Інше -->
             <LinearLayout
                 android:id="@+id/layoutSystem"
                 android:layout_width="match_parent"

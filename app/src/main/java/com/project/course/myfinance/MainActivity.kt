@@ -46,9 +46,7 @@ class MainActivity : AppCompatActivity() {
     private var currentLimit: Long = 10L
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
-
-    // Змінні для фільтрів
-    private var currentFilter = "all" // "all", "expense", "income"
+    private var currentFilter = "all"
     private lateinit var btnFilterAll: Button
     private lateinit var btnFilterExpense: Button
     private lateinit var btnFilterIncome: Button
@@ -280,7 +278,7 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         currentTransactions = transactionsList
-                        applyFilter() // Застосовуємо фільтр замість прямого оновлення адаптера
+                        applyFilter()
 
                         val validSelectedIds =
                             transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }

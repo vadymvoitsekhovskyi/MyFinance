@@ -19,8 +19,8 @@
 
         <ImageView
             android:id="@+id/btnBack"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:contentDescription="Назад"
             android:src="@drawable/ic_back_arrow" />
 
@@ -75,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Сума (наприклад: 150.50)"
+                android:hint="Сума"
                 android:inputType="numberDecimal"
                 android:minHeight="48dp" />
 
@@ -84,7 +84,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Категорія (Їжа, Транспорт, ЗП)"
+                android:hint="Категорія"
                 android:inputType="text|textCapSentences"
                 android:minHeight="48dp" />
 
@@ -93,7 +93,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Коментар (необов'язково)"
+                android:hint="Коментар"
                 android:inputType="text|textCapSentences"
                 android:minHeight="48dp" />
 
