@@ -163,12 +163,28 @@ class ProfileActivity : AppCompatActivity() {
                 val transactions = snapshot.toObjects(Transaction::class.java)
 
                 val content = if (currentExportFormat == "json") {
-                    gson.toJson(transactions)
+                    val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+                    sdf.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
+
+                    val jsonList = transactions.map { t ->
+                        mapOf(
+                            "id" to t.id,
+                            "type" to t.type,
+                            "category" to t.category,
+                            "amount" to t.amount,
+                            "date" to sdf.format(Date(t.date)),
+                            "comment" to t.comment
+                        )
+                    }
+                    gson.toJson(jsonList)
                 } else {
                     buildCsvString(transactions)
                 }
 
                 contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    if (currentExportFormat == "csv") {
+                        outputStream.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                    }
                     outputStream.write(content.toByteArray(Charsets.UTF_8))
                 }
 
@@ -197,17 +213,42 @@ class ProfileActivity : AppCompatActivity() {
         setLoading(true)
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val content =
-                    contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 if (content.isNullOrBlank()) throw Exception("Файл порожній або його неможливо прочитати")
 
-                val isJson = content.trimStart().startsWith("[")
+                val cleanContent = if (content.startsWith("\uFEFF")) content.substring(1) else content
+                val isJson = cleanContent.trimStart().startsWith("[")
 
                 val importedTransactions = if (isJson) {
-                    val type = object : TypeToken<List<Transaction>>() {}.type
-                    gson.fromJson<List<Transaction>>(content, type)
+                    val type = object : TypeToken<List<Map<String, Any>>>() {}.type
+                    val jsonList: List<Map<String, Any>> = gson.fromJson(cleanContent, type)
+
+                    val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+                    sdf.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
+
+                    jsonList.map { map ->
+                        val dateVal = map["date"]
+                        val parsedDateLong = when (dateVal) {
+                            is String -> try {
+                                sdf.parse(dateVal)?.time ?: System.currentTimeMillis()
+                            } catch (e: Exception) {
+                                System.currentTimeMillis()
+                            }
+                            is Number -> dateVal.toLong()
+                            else -> System.currentTimeMillis()
+                        }
+
+                        Transaction(
+                            id = map["id"] as? String ?: "",
+                            type = map["type"] as? String ?: "",
+                            category = map["category"] as? String ?: "",
+                            amount = (map["amount"] as? Double) ?: 0.0,
+                            date = parsedDateLong,
+                            comment = map["comment"] as? String ?: ""
+                        )
+                    }
                 } else {
-                    parseCsvString(content)
+                    parseCsvString(cleanContent)
                 }
 
                 if (importedTransactions.isEmpty()) {
