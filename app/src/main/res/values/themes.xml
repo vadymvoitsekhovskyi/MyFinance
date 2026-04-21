@@ -2,6 +2,9 @@
     <style name="Base.Theme.MyFinance" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary_green</item>
         <item name="colorSecondary">@color/primary_green_light</item>
+
+        <item name="android:fontFamily">@font/ibm_plex_serif</item>
+        <item name="fontFamily">@font/ibm_plex_serif</item>
     </style>
     <style name="Theme.MyFinance" parent="Base.Theme.MyFinance" />
 </resources>

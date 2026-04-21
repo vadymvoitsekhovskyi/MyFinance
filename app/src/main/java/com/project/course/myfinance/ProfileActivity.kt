@@ -63,8 +63,6 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var layoutSystem: LinearLayout
     private var currentExportFormat: String = "csv"
     private val gson = Gson()
-
-    // ДОДАНО ДЛЯ GOOGLE RE-AUTH
     private val WEB_CLIENT_ID = "789190818561-pfb6m4vr207b90s5r1ku8pm07bl070i2.apps.googleusercontent.com"
     private lateinit var googleSignInClient: GoogleSignInClient
     private var onGoogleReAuthSuccess: (() -> Unit)? = null
@@ -91,7 +89,6 @@ class ProfileActivity : AppCompatActivity() {
             uri?.let { performImport(it) }
         }
 
-    // ДОДАНО: Лаунчер для повторної Google авторизації
     private val googleReAuthLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         setLoading(false)
         if (result.resultCode == Activity.RESULT_OK) {
@@ -121,7 +118,6 @@ class ProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
-        // Ініціалізація Google Client для Re-Auth
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(WEB_CLIENT_ID)
             .requestEmail()
@@ -149,7 +145,6 @@ class ProfileActivity : AppCompatActivity() {
         layoutData = findViewById(R.id.layoutData)
         layoutSystem = findViewById(R.id.layoutSystem)
 
-        // Динамічна зміна назви кнопки пароля
         val user = auth.currentUser
         val hasPassword = user?.providerData?.any { it.providerId == EmailAuthProvider.PROVIDER_ID } == true
         btnChangePassword.text = if (hasPassword) "Змінити пароль" else "Створити пароль"
@@ -562,34 +557,41 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showChangeEmailDialog() {
         val user = auth.currentUser ?: return
-        // Перевіряємо, чи входив користувач колись через пароль
-        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+        val hasPassword = user.providerData.any { it.providerId == com.google.firebase.auth.EmailAuthProvider.PROVIDER_ID }
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(64, 40, 64, 10)
+        }
 
-        val emailInput = EditText(this)
-        emailInput.hint = "Новий email"
-        emailInput.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-        layout.addView(emailInput)
+        val tilEmail = com.google.android.material.textfield.TextInputLayout(this).apply {
+            hint = "Новий email"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 16) }
+        }
+        val emailInput = com.google.android.material.textfield.TextInputEditText(this).apply {
+            inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        }
+        tilEmail.addView(emailInput)
+        layout.addView(tilEmail)
 
-        var passInput: EditText? = null
+        var passInput: com.google.android.material.textfield.TextInputEditText? = null
         if (hasPassword) {
-            passInput = EditText(this)
-            passInput.hint = "Поточний пароль"
-            passInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            layout.addView(passInput)
-
-            val cbShowPassword = android.widget.CheckBox(this)
-            cbShowPassword.text = "Показати пароль"
-            cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-                val type =
-                    if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                passInput.inputType = type
-                passInput.setSelection(passInput.text.length)
+            val tilPass = com.google.android.material.textfield.TextInputLayout(this).apply {
+                hint = "Поточний пароль"
+                endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
             }
-            layout.addView(cbShowPassword)
+            passInput = com.google.android.material.textfield.TextInputEditText(this).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            tilPass.addView(passInput)
+            layout.addView(tilPass)
         }
 
         val dialog = AlertDialog.Builder(this)
@@ -618,7 +620,6 @@ class ProfileActivity : AppCompatActivity() {
                         Toast.makeText(this, "Введіть пароль", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // Якщо тільки Google – просимо підтвердження через Google
                     setLoading(true)
                     onGoogleReAuthSuccess = {
                         updateEmail(user, newEmail, dialog)
@@ -648,43 +649,57 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showChangePasswordDialog() {
         val user = auth.currentUser ?: return
-        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+        val hasPassword = user.providerData.any { it.providerId == com.google.firebase.auth.EmailAuthProvider.PROVIDER_ID }
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(64, 40, 64, 10)
+        }
 
-        var oldPassInput: EditText? = null
+        var oldPassInput: com.google.android.material.textfield.TextInputEditText? = null
         if (hasPassword) {
-            oldPassInput = EditText(this)
-            oldPassInput.hint = "Поточний пароль"
-            oldPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            layout.addView(oldPassInput)
+            val tilOldPass = com.google.android.material.textfield.TextInputLayout(this).apply {
+                hint = "Поточний пароль"
+                endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, 16) }
+            }
+            oldPassInput = com.google.android.material.textfield.TextInputEditText(this).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            tilOldPass.addView(oldPassInput)
+            layout.addView(tilOldPass)
         }
 
-        val newPassInput = EditText(this)
-        newPassInput.hint = if (hasPassword) "Новий пароль" else "Створіть пароль"
-        newPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        layout.addView(newPassInput)
-
-        val confirmPassInput = EditText(this)
-        confirmPassInput.hint = "Підтвердіть пароль"
-        confirmPassInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        layout.addView(confirmPassInput)
-
-        val cbShowPassword = android.widget.CheckBox(this)
-        cbShowPassword.text = "Показати паролі"
-        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type = if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            oldPassInput?.inputType = type
-            newPassInput.inputType = type
-            confirmPassInput.inputType = type
-
-            oldPassInput?.setSelection(oldPassInput.text.length)
-            newPassInput.setSelection(newPassInput.text.length)
-            confirmPassInput.setSelection(confirmPassInput.text.length)
+        val tilNewPass = com.google.android.material.textfield.TextInputLayout(this).apply {
+            hint = if (hasPassword) "Новий пароль" else "Створіть пароль"
+            endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 16) }
         }
-        layout.addView(cbShowPassword)
+        val newPassInput = com.google.android.material.textfield.TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        tilNewPass.addView(newPassInput)
+        layout.addView(tilNewPass)
+
+        val tilConfirmPass = com.google.android.material.textfield.TextInputLayout(this).apply {
+            hint = "Підтвердіть пароль"
+            endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        val confirmPassInput = com.google.android.material.textfield.TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        tilConfirmPass.addView(confirmPassInput)
+        layout.addView(tilConfirmPass)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(if (hasPassword) "Змінити пароль" else "Створити пароль")
@@ -728,7 +743,6 @@ class ProfileActivity : AppCompatActivity() {
                         }
                     }, {})
                 } else {
-                    // Якщо пароля немає, підтверджуємо через Google перед створенням
                     setLoading(true)
                     onGoogleReAuthSuccess = {
                         user.updatePassword(newPass).addOnCompleteListener { task ->
@@ -757,7 +771,7 @@ class ProfileActivity : AppCompatActivity() {
             .setMessage("Ви впевнені, що хочете вийти з акаунта?")
             .setPositiveButton("Вийти") { _, _ ->
                 auth.signOut()
-                googleSignInClient.signOut() // Розлогінюємось також із Google клієнта
+                googleSignInClient.signOut()
                 goToLogin()
             }
             .setNegativeButton("Скасувати", null)
@@ -766,27 +780,27 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showDeleteAccountDialog() {
         val user = auth.currentUser ?: return
-        val hasPassword = user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+        val hasPassword = user.providerData.any { it.providerId == com.google.firebase.auth.EmailAuthProvider.PROVIDER_ID }
 
         if (hasPassword) {
-            val layout = LinearLayout(this)
-            layout.orientation = LinearLayout.VERTICAL
-            layout.setPadding(50, 40, 50, 10)
-
-            val input = EditText(this)
-            input.hint = "Введіть пароль для підтвердження"
-            input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            layout.addView(input)
-
-            val cbShowPassword = android.widget.CheckBox(this)
-            cbShowPassword.text = "Показати пароль"
-            cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-                val type =
-                    if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                input.inputType = type
-                input.setSelection(input.text.length)
+            val layout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(64, 40, 64, 10)
             }
-            layout.addView(cbShowPassword)
+
+            val tilPass = com.google.android.material.textfield.TextInputLayout(this).apply {
+                hint = "Введіть пароль для підтвердження"
+                endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+            val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            tilPass.addView(input)
+            layout.addView(tilPass)
 
             val dialog = AlertDialog.Builder(this)
                 .setTitle("Видалити акаунт")
@@ -812,7 +826,6 @@ class ProfileActivity : AppCompatActivity() {
             }
             dialog.show()
         } else {
-            // ЛОГІКА ДЛЯ GOOGLE: Не питаємо пароль, а просимо перепідтвердити вхід через Google
             AlertDialog.Builder(this)
                 .setTitle("Видалити акаунт")
                 .setMessage("Увага! Це назавжди видалить ваш акаунт та всі ваші транзакції.\n\nДля підтвердження необхідно буде вибрати ваш Google акаунт.")

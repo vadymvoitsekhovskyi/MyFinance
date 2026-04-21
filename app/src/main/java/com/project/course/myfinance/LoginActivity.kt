@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -20,6 +19,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.project.course.myfinance.auth.AuthState
 import com.project.course.myfinance.auth.AuthViewModel
@@ -58,21 +59,13 @@ class LoginActivity : AppCompatActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        val etEmail = findViewById<EditText>(R.id.etEmail)
-        val etPassword = findViewById<EditText>(R.id.etPassword)
-        val cbShowPassword = findViewById<CheckBox>(R.id.cbShowPassword)
+        val etEmail = findViewById<TextInputEditText>(R.id.etEmail)
+        val etPassword = findViewById<TextInputEditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val btnGoogleSignIn = findViewById<Button>(R.id.btnGoogleSignIn)
         val tvGoToRegister = findViewById<TextView>(R.id.tvGoToRegister)
         val tvForgotPassword = findViewById<TextView>(R.id.tvForgotPassword)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
-
-        cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
-            val type =
-                if (isChecked) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            etPassword.inputType = type
-            etPassword.setSelection(etPassword.text.length)
-        }
 
         viewModel.authState.observe(this) { state ->
             when (state) {
@@ -81,13 +74,11 @@ class LoginActivity : AppCompatActivity() {
                     btnLogin.isEnabled = false
                     btnGoogleSignIn.isEnabled = false
                 }
-
                 is AuthState.Success -> {
                     progressBar.visibility = View.GONE
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 }
-
                 is AuthState.Error -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
@@ -95,7 +86,6 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
                     viewModel.resetState()
                 }
-
                 is AuthState.Idle -> {
                     progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
@@ -127,18 +117,26 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun showForgotPasswordDialog(prefilledEmail: String) {
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
-
-        val input = EditText(this)
-        input.hint = "Введіть ваш email"
-        input.inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-        if (prefilledEmail.isNotEmpty()) {
-            input.setText(prefilledEmail)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(64, 40, 64, 10)
         }
 
-        layout.addView(input)
+        val contextThemeWrapper = android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox)
+
+        val tilEmail = TextInputLayout(contextThemeWrapper).apply {
+            hint = "Введіть ваш email"
+        }
+
+        val input = TextInputEditText(contextThemeWrapper).apply {
+            inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            if (prefilledEmail.isNotEmpty()) {
+                setText(prefilledEmail)
+            }
+        }
+
+        tilEmail.addView(input)
+        layout.addView(tilEmail)
 
         AlertDialog.Builder(this)
             .setTitle("Відновлення пароля")
