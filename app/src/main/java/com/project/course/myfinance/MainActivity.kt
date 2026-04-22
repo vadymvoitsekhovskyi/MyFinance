@@ -131,6 +131,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
 
+        val btnStatistics = findViewById<ImageView>(R.id.btnStatistics)
+        btnStatistics.setOnClickListener {
+            startActivity(Intent(this, StatisticsActivity::class.java))
+        }
+
         fabScrollUp.setOnClickListener {
             rvTransactions.smoothScrollToPosition(0)
         }
