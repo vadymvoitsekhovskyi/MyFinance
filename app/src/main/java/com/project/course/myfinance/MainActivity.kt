@@ -60,11 +60,12 @@ class MainActivity : AppCompatActivity() {
     private var currentLimit: Long = 10L
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
-    private var currentFilter = "all"
-    private lateinit var btnFilterAll: Button
-    private lateinit var btnFilterExpense: Button
-    private lateinit var btnFilterIncome: Button
-
+    private var currentTypeFilter = "all"
+    private var currentCategoryFilter = "all"
+    private var currentSortOrder = "desc"
+    private lateinit var btnFilterType: Button
+    private lateinit var btnFilterCategory: Button
+    private lateinit var btnSortDate: Button
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
 
@@ -112,19 +113,19 @@ class MainActivity : AppCompatActivity() {
         val btnSelectAll = findViewById<ImageView>(R.id.btnSelectAll)
         val btnDeleteSelected = findViewById<ImageView>(R.id.btnDeleteSelected)
 
-        btnFilterAll = findViewById(R.id.btnFilterAll)
-        btnFilterExpense = findViewById(R.id.btnFilterExpense)
-        btnFilterIncome = findViewById(R.id.btnFilterIncome)
+        btnFilterType = findViewById(R.id.btnFilterType)
+        btnFilterCategory = findViewById(R.id.btnFilterCategory)
+        btnSortDate = findViewById(R.id.btnSortDate)
 
-        tvTotalBalance.text = "****** ₴"
+        tvTotalBalance.text = "••••• ₴"
 
         layoutBalanceText.setOnClickListener {
             toggleBalanceVisibility()
         }
 
-        btnFilterAll.setOnClickListener { setFilter("all") }
-        btnFilterExpense.setOnClickListener { setFilter("expense") }
-        btnFilterIncome.setOnClickListener { setFilter("income") }
+        btnFilterType.setOnClickListener { showTypeFilterDialog() }
+        btnFilterCategory.setOnClickListener { showCategoryFilterDialog() }
+        btnSortDate.setOnClickListener { showSortDialog() }
 
         cvProfile.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
@@ -197,10 +198,110 @@ class MainActivity : AppCompatActivity() {
     private fun toggleBalanceVisibility() {
         if (isBalanceVisible) {
             isBalanceVisible = false
-            tvTotalBalance.text = "****** ₴"
+            tvTotalBalance.text = "••••• ₴"
         } else {
             isBalanceVisible = true
             tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+        }
+    }
+
+    private fun showTypeFilterDialog() {
+        val options = arrayOf("Всі", "Витрати", "Доходи")
+        val checkedItem = when(currentTypeFilter) { "expense" -> 1; "income" -> 2; else -> 0 }
+
+        AlertDialog.Builder(this)
+            .setTitle("Оберіть тип")
+            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
+                currentTypeFilter = when(which) { 1 -> "expense"; 2 -> "income"; else -> "all" }
+                btnFilterType.text = "Тип: ${options[which]}"
+                applyFiltersAndSort()
+                dialog.dismiss()
+            }.show()
+    }
+
+    private fun showCategoryFilterDialog() {
+        val categories = currentTransactions.map { it.category }.distinct().sorted().toMutableList()
+        categories.add(0, "Всі")
+        val options = categories.toTypedArray()
+        val checkedItem = if (currentCategoryFilter == "all") 0 else options.indexOf(currentCategoryFilter).takeIf { it != -1 } ?: 0
+
+        AlertDialog.Builder(this)
+            .setTitle("Оберіть категорію")
+            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
+                currentCategoryFilter = if (which == 0) "all" else options[which]
+
+                var shortCat = options[which]
+                if (shortCat.length > 10 && which != 0) shortCat = shortCat.substring(0, 10) + "..."
+
+                btnFilterCategory.text = if (which == 0) "Категорія: Всі" else shortCat
+                applyFiltersAndSort()
+                dialog.dismiss()
+            }.show()
+    }
+
+    private fun showSortDialog() {
+        val options = arrayOf("Спочатку нові (↓)", "Спочатку старі (↑)")
+        val checkedItem = if (currentSortOrder == "desc") 0 else 1
+
+        AlertDialog.Builder(this)
+            .setTitle("Сортування за датою")
+            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
+                currentSortOrder = if (which == 0) "desc" else "asc"
+                btnSortDate.text = if (which == 0) "Сорт: Нові" else "Сорт: Старі"
+                applyFiltersAndSort()
+                dialog.dismiss()
+            }.show()
+    }
+
+    private fun applyFiltersAndSort() {
+        var result = currentTransactions
+
+        if (currentTypeFilter != "all") {
+            result = result.filter { it.type == currentTypeFilter }
+        }
+
+        if (currentCategoryFilter != "all") {
+            result = result.filter { it.category == currentCategoryFilter }
+        }
+
+        result = if (currentSortOrder == "desc") {
+            result.sortedByDescending { it.date }
+        } else {
+            result.sortedBy { it.date }
+        }
+
+        transactionAdapter.updateData(result)
+        updateFilterButtonsStyle()
+    }
+
+    private fun updateFilterButtonsStyle() {
+        val colorActiveText = Color.WHITE
+        val colorActiveBg = Color.parseColor("#2E7D32")
+        val colorInactiveText = Color.parseColor("#757575")
+        val colorTransparent = Color.TRANSPARENT
+
+        if (currentTypeFilter != "all") {
+            btnFilterType.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterType.setTextColor(colorActiveText)
+        } else {
+            btnFilterType.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterType.setTextColor(colorInactiveText)
+        }
+
+        if (currentCategoryFilter != "all") {
+            btnFilterCategory.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterCategory.setTextColor(colorActiveText)
+        } else {
+            btnFilterCategory.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterCategory.setTextColor(colorInactiveText)
+        }
+
+        if (currentSortOrder != "desc") {
+            btnSortDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnSortDate.setTextColor(colorActiveText)
+        } else {
+            btnSortDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnSortDate.setTextColor(colorInactiveText)
         }
     }
 
@@ -275,32 +376,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         snapshotListener?.remove()
         balanceListener?.remove()
-    }
-
-    private fun setFilter(filterType: String) {
-        currentFilter = filterType
-
-        val transparent = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
-
-        btnFilterAll.backgroundTintList = if (filterType == "all") android.content.res.ColorStateList.valueOf(Color.parseColor("#2E7D32")) else transparent
-        btnFilterAll.setTextColor(if (filterType == "all") Color.WHITE else Color.parseColor("#2E7D32"))
-
-        btnFilterExpense.backgroundTintList = if (filterType == "expense") android.content.res.ColorStateList.valueOf(Color.parseColor("#F44336")) else transparent
-        btnFilterExpense.setTextColor(if (filterType == "expense") Color.WHITE else Color.parseColor("#F44336"))
-
-        btnFilterIncome.backgroundTintList = if (filterType == "income") android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50")) else transparent
-        btnFilterIncome.setTextColor(if (filterType == "income") Color.WHITE else Color.parseColor("#4CAF50"))
-
-        applyFilter()
-    }
-
-    private fun applyFilter() {
-        val filteredList = when (currentFilter) {
-            "expense" -> currentTransactions.filter { it.type == "expense" }
-            "income" -> currentTransactions.filter { it.type == "income" }
-            else -> currentTransactions
-        }
-        transactionAdapter.updateData(filteredList)
     }
 
     private fun updateProfileIcon() {
@@ -407,7 +482,7 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         currentTransactions = transactionsList
-                        applyFilter()
+                        applyFiltersAndSort()
 
                         val validSelectedIds =
                             transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }

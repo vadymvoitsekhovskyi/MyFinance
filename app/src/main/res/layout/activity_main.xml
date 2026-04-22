@@ -197,33 +197,33 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/btnFilterAll"
+                android:id="@+id/btnFilterType"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Всі"
-                android:textColor="@color/white"
-                app:backgroundTint="@color/primary_green"
+                android:text="Тип: Всі"
+                android:textColor="#757575"
+                app:strokeColor="#BDBDBD"
                 android:layout_marginEnd="8dp"/>
 
             <Button
-                android:id="@+id/btnFilterExpense"
+                android:id="@+id/btnFilterCategory"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Витрати"
-                android:textColor="#F44336"
-                app:strokeColor="#F44336"
+                android:text="Категорія: Всі"
+                android:textColor="#757575"
+                app:strokeColor="#BDBDBD"
                 android:layout_marginEnd="8dp"/>
 
             <Button
-                android:id="@+id/btnFilterIncome"
+                android:id="@+id/btnSortDate"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Доходи"
-                android:textColor="#4CAF50"
-                app:strokeColor="#4CAF50"/>
+                android:text="Сорт: Нові"
+                android:textColor="#757575"
+                app:strokeColor="#BDBDBD"/>
         </LinearLayout>
     </HorizontalScrollView>
 
