@@ -1,5 +1,6 @@
 package com.project.course.myfinance
 
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -17,7 +18,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -36,10 +36,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.project.course.myfinance.models.Transaction
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -50,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var transactionAdapter: TransactionAdapter
     private lateinit var tvTotalBalance: TextView
     private lateinit var rvTransactions: RecyclerView
+    private lateinit var tvEmptyState: TextView
     private lateinit var topPanel: LinearLayout
     private lateinit var selectionPanel: LinearLayout
     private lateinit var tvSelectedCount: TextView
@@ -63,8 +62,10 @@ class MainActivity : AppCompatActivity() {
     private var currentTypeFilter = "all"
     private var currentCategoryFilter = "all"
     private var currentSortOrder = "desc"
+    private var currentSpecificDateFilter: Long? = null
     private lateinit var btnFilterType: Button
     private lateinit var btnFilterCategory: Button
+    private lateinit var btnFilterSpecificDate: Button
     private lateinit var btnSortDate: Button
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
@@ -100,6 +101,7 @@ class MainActivity : AppCompatActivity() {
 
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
+        tvEmptyState = findViewById(R.id.tvEmptyState)
         topPanel = findViewById(R.id.topPanel)
         selectionPanel = findViewById(R.id.selectionPanel)
         tvSelectedCount = findViewById(R.id.tvSelectedCount)
@@ -115,6 +117,7 @@ class MainActivity : AppCompatActivity() {
 
         btnFilterType = findViewById(R.id.btnFilterType)
         btnFilterCategory = findViewById(R.id.btnFilterCategory)
+        btnFilterSpecificDate = findViewById(R.id.btnFilterSpecificDate)
         btnSortDate = findViewById(R.id.btnSortDate)
 
         tvTotalBalance.text = "••••• ₴"
@@ -125,6 +128,7 @@ class MainActivity : AppCompatActivity() {
 
         btnFilterType.setOnClickListener { showTypeFilterDialog() }
         btnFilterCategory.setOnClickListener { showCategoryFilterDialog() }
+        btnFilterSpecificDate.setOnClickListener { showSpecificDatePicker() }
         btnSortDate.setOnClickListener { showSortDialog() }
 
         cvProfile.setOnClickListener {
@@ -244,6 +248,43 @@ class MainActivity : AppCompatActivity() {
             }.show()
     }
 
+    private fun showSpecificDatePicker() {
+        val calendar = Calendar.getInstance()
+
+        if (currentSpecificDateFilter != null) {
+            calendar.timeInMillis = currentSpecificDateFilter!!
+        }
+
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+            val selectedCalendar = Calendar.getInstance().apply {
+                set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            currentSpecificDateFilter = selectedCalendar.timeInMillis
+
+            val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+            btnFilterSpecificDate.text = "Дата: ${sdf.format(selectedCalendar.time)}"
+
+            currentLimit = 10L
+            loadTransactions()
+        }, year, month, day)
+
+        datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+
+        datePickerDialog.setButton(DatePickerDialog.BUTTON_NEUTRAL, "Очистити") { _, _ ->
+            currentSpecificDateFilter = null
+            btnFilterSpecificDate.text = "Дата: Всі"
+            currentLimit = 10L
+            loadTransactions()
+        }
+
+        datePickerDialog.show()
+    }
+
     private fun showSortDialog() {
         val options = arrayOf("Спочатку нові (↓)", "Спочатку старі (↑)")
         val checkedItem = if (currentSortOrder == "desc") 0 else 1
@@ -277,6 +318,14 @@ class MainActivity : AppCompatActivity() {
 
         transactionAdapter.updateData(result)
         updateFilterButtonsStyle()
+
+        if (result.isEmpty()) {
+            rvTransactions.visibility = View.GONE
+            tvEmptyState.visibility = View.VISIBLE
+        } else {
+            rvTransactions.visibility = View.VISIBLE
+            tvEmptyState.visibility = View.GONE
+        }
     }
 
     private fun updateFilterButtonsStyle() {
@@ -299,6 +348,14 @@ class MainActivity : AppCompatActivity() {
         } else {
             btnFilterCategory.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
             btnFilterCategory.setTextColor(colorInactiveText)
+        }
+
+        if (currentSpecificDateFilter != null) {
+            btnFilterSpecificDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterSpecificDate.setTextColor(colorActiveText)
+        } else {
+            btnFilterSpecificDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterSpecificDate.setTextColor(colorInactiveText)
         }
 
         if (currentSortOrder != "desc") {
@@ -466,36 +523,43 @@ class MainActivity : AppCompatActivity() {
 
         snapshotListener?.remove()
 
-        snapshotListener =
-            db.collection("users").document(currentUser.uid).collection("transactions")
-                .orderBy("date", Query.Direction.DESCENDING).limit(currentLimit)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT)
-                            .show()
-                        return@addSnapshotListener
-                    }
+        var query: Query = db.collection("users").document(currentUser.uid).collection("transactions")
 
-                    if (snapshot != null) {
-                        val transactionsList = mutableListOf<Transaction>()
+        if (currentSpecificDateFilter != null) {
+            val startOfDay = currentSpecificDateFilter!!
+            val endOfDay = startOfDay + (24L * 60L * 60L * 1000L) - 1L
+            query = query.whereGreaterThanOrEqualTo("date", startOfDay)
+                .whereLessThanOrEqualTo("date", endOfDay)
+        }
 
-                        for (document in snapshot.documents) {
-                            val transaction = document.toObject(Transaction::class.java)
-                            if (transaction != null) {
-                                transactionsList.add(transaction)
-                            }
-                        }
-
-                        currentTransactions = transactionsList
-                        applyFiltersAndSort()
-
-                        val validSelectedIds =
-                            transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
-                        transactionAdapter.selectedIds.clear()
-                        transactionAdapter.selectedIds.addAll(validSelectedIds)
-                        updateSelectionUI()
-                    }
+        snapshotListener = query.orderBy("date", Query.Direction.DESCENDING).limit(currentLimit)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT)
+                        .show()
+                    return@addSnapshotListener
                 }
+
+                if (snapshot != null) {
+                    val transactionsList = mutableListOf<Transaction>()
+
+                    for (document in snapshot.documents) {
+                        val transaction = document.toObject(Transaction::class.java)
+                        if (transaction != null) {
+                            transactionsList.add(transaction)
+                        }
+                    }
+
+                    currentTransactions = transactionsList
+                    applyFiltersAndSort()
+
+                    val validSelectedIds =
+                        transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
+                    transactionAdapter.selectedIds.clear()
+                    transactionAdapter.selectedIds.addAll(validSelectedIds)
+                    updateSelectionUI()
+                }
+            }
     }
 
     private fun showTransactionDetailsBottomSheet(transaction: Transaction) {
