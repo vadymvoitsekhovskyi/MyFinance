@@ -14,6 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.project.course.myfinance.models.Transaction
@@ -25,7 +26,6 @@ class AddTransactionActivity : AppCompatActivity() {
     private var editingTransactionId: String? = null
     private var originalDate: Long = 0L
 
-    // Список категорій за замовчуванням
     private val categories = arrayOf(
         "Продукти", "Транспорт", "Спорт", "Техніка", "Дім",
         "Здоров'я", "Одяг", "Кафе/Ресторани", "Зарплата", "Подарунки", "Інше"
@@ -42,15 +42,26 @@ class AddTransactionActivity : AppCompatActivity() {
         val rbIncome = findViewById<RadioButton>(R.id.rbIncome)
         val etAmount = findViewById<EditText>(R.id.etAmount)
         val etCategory = findViewById<AutoCompleteTextView>(R.id.etCategory)
+        val tilCustomCategory = findViewById<TextInputLayout>(R.id.tilCustomCategory)
+        val etCustomCategory = findViewById<EditText>(R.id.etCustomCategory)
         val etComment = findViewById<EditText>(R.id.etComment)
         val btnSave = findViewById<Button>(R.id.btnSaveTransaction)
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
         btnBack.setOnClickListener { finish() }
 
-        // Налаштування випадаючого списку категорій
         val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, categories)
         etCategory.setAdapter(adapter)
+
+        etCategory.setOnItemClickListener { _, _, position, _ ->
+            val selectedItem = adapter.getItem(position).toString()
+            if (selectedItem == "Інше") {
+                tilCustomCategory.visibility = View.VISIBLE
+            } else {
+                tilCustomCategory.visibility = View.GONE
+                etCustomCategory.setText("")
+            }
+        }
 
         editingTransactionId = intent.getStringExtra("EXTRA_ID")
         if (editingTransactionId != null) {
@@ -65,15 +76,30 @@ class AddTransactionActivity : AppCompatActivity() {
 
             if (type == "income") rbIncome.isChecked = true else rbExpense.isChecked = true
             etAmount.setText(amount.toString())
-            etCategory.setText(category, false) // false - щоб не відкривався список автоматично при заповненні
             etComment.setText(comment)
+
+            if (!categories.contains(category) && category.isNotEmpty()) {
+                etCategory.setText("Інше", false)
+                tilCustomCategory.visibility = View.VISIBLE
+                etCustomCategory.setText(category)
+            } else {
+                etCategory.setText(category, false)
+            }
         }
 
         btnSave.setOnClickListener {
             val amountText = etAmount.text.toString().trim()
-            val category = etCategory.text.toString().trim()
+            var category = etCategory.text.toString().trim()
             val comment = etComment.text.toString().trim()
             val type = if (rbExpense.isChecked) "expense" else "income"
+
+            if (category == "Інше") {
+                category = etCustomCategory.text.toString().trim()
+                if (category.isBlank()) {
+                    Toast.makeText(this, "Введіть власну назву категорії", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
 
             if (amountText.isBlank() || category.isBlank()) {
                 Toast.makeText(this, "Введіть суму та оберіть категорію", Toast.LENGTH_SHORT).show()
