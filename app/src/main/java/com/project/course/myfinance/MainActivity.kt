@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivProfile: ImageView
     private lateinit var ivBalanceLogo: ImageView
     private var currentTransactions: List<Transaction> = emptyList()
-    private var currentLimit: Long = 10L
+    private var currentLimit: Long = 30L
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
     private var currentTypeFilter = "all"
@@ -69,8 +69,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnSortDate: Button
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
-
-    // Карта для збереження прорахованого балансу на кінець кожного дня
     private var dailyBalancesMap = mapOf<String, Double>()
 
     private val animatedIcons = listOf(
@@ -230,7 +228,8 @@ class MainActivity : AppCompatActivity() {
                     1 -> "expense"; 2 -> "income"; else -> "all"
                 }
                 btnFilterType.text = "Тип: ${options[which]}"
-                applyFiltersAndSort()
+                currentLimit = 100L
+                loadTransactions()
                 dialog.dismiss()
             }.show()
     }
@@ -252,7 +251,8 @@ class MainActivity : AppCompatActivity() {
                 if (shortCat.length > 10 && which != 0) shortCat = shortCat.substring(0, 10) + "..."
 
                 btnFilterCategory.text = if (which == 0) "Категорія: Всі" else shortCat
-                applyFiltersAndSort()
+                currentLimit = 100L
+                loadTransactions()
                 dialog.dismiss()
             }.show()
     }
@@ -304,7 +304,8 @@ class MainActivity : AppCompatActivity() {
             .setSingleChoiceItems(options, checkedItem) { dialog, which ->
                 currentSortOrder = if (which == 0) "desc" else "asc"
                 btnSortDate.text = if (which == 0) "Сорт: Нові" else "Сорт: Старі"
-                applyFiltersAndSort()
+                currentLimit = 100L
+                loadTransactions()
                 dialog.dismiss()
             }.show()
     }
@@ -512,7 +513,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ЗМІНЕНО: тепер ми прораховуємо точну історію балансу з найпершої транзакції
     private fun loadTotalBalance() {
         val currentUser = auth.currentUser ?: return
 
@@ -525,9 +525,7 @@ class MainActivity : AppCompatActivity() {
                     val allTrans =
                         snapshot.documents.mapNotNull { it.toObject(Transaction::class.java) }
 
-                    // Сортуємо ВСІ транзакції від найстарішої до найновішої, щоб правильно рахувати прогрес балансу
                     val sortedTrans = allTrans.sortedBy { it.date }
-
                     var totalBalance = 0.0
                     val balancesMap = mutableMapOf<String, Double>()
 
@@ -539,8 +537,6 @@ class MainActivity : AppCompatActivity() {
                     for (t in sortedTrans) {
                         if (t.type == "income") totalBalance += t.amount else totalBalance -= t.amount
 
-                        // Записуємо баланс. Оскільки ми йдемо хронологічно,
-                        // в кінцевому масиві для кожного дня залишиться ОСТАННЄ значення (End of Day balance)
                         val dateStr = exactDateFormatter.format(Date(t.date))
                         balancesMap[dateStr] = totalBalance
                     }
@@ -553,7 +549,6 @@ class MainActivity : AppCompatActivity() {
                             String.format(Locale.US, "%.2f ₴", currentTotalBalance)
                     }
 
-                    // Передаємо правильну історію в адаптер
                     if (::transactionAdapter.isInitialized) {
                         transactionAdapter.updateDailyBalances(dailyBalancesMap)
                     }

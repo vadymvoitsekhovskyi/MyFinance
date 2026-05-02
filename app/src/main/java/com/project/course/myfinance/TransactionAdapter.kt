@@ -22,8 +22,6 @@ class TransactionAdapter(
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     val selectedIds = mutableSetOf<String>()
-
-    // Сюди ми будемо передавати заздалегідь прораховані баланси на кінець кожного дня
     private var dailyBalances: Map<String, Double> = emptyMap()
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -90,7 +88,6 @@ class TransactionAdapter(
             holder.layoutDateHeader.visibility = View.VISIBLE
             holder.tvDateHeader.text = currentDayMonthStr
 
-            // Витягуємо точний історичний баланс для цієї дати
             val endOfDayBalance = dailyBalances[currentExactDateStr]
             if (endOfDayBalance != null) {
                 holder.tvHistoricalBalance.visibility = View.VISIBLE
@@ -161,7 +158,6 @@ class TransactionAdapter(
         notifyDataSetChanged()
     }
 
-    // Метод для оновлення карти щоденних балансів
     fun updateDailyBalances(newBalances: Map<String, Double>) {
         dailyBalances = newBalances
         notifyDataSetChanged()

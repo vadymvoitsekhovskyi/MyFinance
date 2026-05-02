@@ -105,7 +105,6 @@ class StatisticsActivity : AppCompatActivity() {
         val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
         val cal = java.util.Calendar.getInstance()
 
-        // Фільтруємо транзакції тільки за поточний рік
         val yearlyTransactions = transactions.filter {
             cal.timeInMillis = it.date
             cal.get(java.util.Calendar.YEAR) == currentYear
@@ -115,7 +114,6 @@ class StatisticsActivity : AppCompatActivity() {
         val incomeEntries = ArrayList<BarEntry>()
         val expenseEntries = ArrayList<BarEntry>()
 
-        // Рахуємо дані для кожного з 12 місяців
         for (month in 0..11) {
             val monthTransactions = yearlyTransactions.filter {
                 cal.timeInMillis = it.date
@@ -143,7 +141,7 @@ class StatisticsActivity : AppCompatActivity() {
         yearlyBarChart.xAxis.valueFormatter = IndexAxisValueFormatter(monthNames)
         yearlyBarChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         yearlyBarChart.xAxis.setDrawGridLines(false)
-        yearlyBarChart.xAxis.axisMinimum = -0.5f // щоб перший стовпець не обрізався
+        yearlyBarChart.xAxis.axisMinimum = -0.5f
         yearlyBarChart.xAxis.axisMaximum = 12f
         yearlyBarChart.axisRight.isEnabled = false
         yearlyBarChart.description.isEnabled = false
@@ -193,7 +191,14 @@ class StatisticsActivity : AppCompatActivity() {
         }
 
         val dataSet = PieDataSet(entries, "")
-        dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
+        val colors = java.util.ArrayList<Int>()
+        colors.addAll(ColorTemplate.MATERIAL_COLORS.toList())
+        colors.addAll(ColorTemplate.VORDIPLOM_COLORS.toList())
+        colors.addAll(ColorTemplate.JOYFUL_COLORS.toList())
+        colors.addAll(ColorTemplate.COLORFUL_COLORS.toList())
+        colors.addAll(ColorTemplate.LIBERTY_COLORS.toList())
+        colors.addAll(ColorTemplate.PASTEL_COLORS.toList())
+        dataSet.colors = colors
         dataSet.sliceSpace = 3f
         dataSet.selectionShift = 5f
 
