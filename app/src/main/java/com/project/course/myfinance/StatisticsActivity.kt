@@ -38,6 +38,7 @@ class StatisticsActivity : AppCompatActivity() {
     private lateinit var cardTrend: CardView
     private lateinit var ivTrendArrow: ImageView
     private lateinit var tvTrendText: TextView
+    private lateinit var yearlyBarChart: BarChart
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +52,7 @@ class StatisticsActivity : AppCompatActivity() {
         cardTrend = findViewById(R.id.cardTrend)
         ivTrendArrow = findViewById(R.id.ivTrendArrow)
         tvTrendText = findViewById(R.id.tvTrendText)
+        yearlyBarChart = findViewById(R.id.yearlyBarChart)
 
         setupCharts()
         loadData()
@@ -91,11 +93,65 @@ class StatisticsActivity : AppCompatActivity() {
                 buildTrendIndicator(transactions)
                 buildPieChart(transactions)
                 buildBarChart(transactions)
+                buildYearlyBarChart(transactions)
             }
             .addOnFailureListener {
                 progressBar.visibility = View.GONE
                 Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun buildYearlyBarChart(transactions: List<Transaction>) {
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val cal = java.util.Calendar.getInstance()
+
+        // Фільтруємо транзакції тільки за поточний рік
+        val yearlyTransactions = transactions.filter {
+            cal.timeInMillis = it.date
+            cal.get(java.util.Calendar.YEAR) == currentYear
+        }
+
+        val monthNames = arrayOf("Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру")
+        val incomeEntries = ArrayList<BarEntry>()
+        val expenseEntries = ArrayList<BarEntry>()
+
+        // Рахуємо дані для кожного з 12 місяців
+        for (month in 0..11) {
+            val monthTransactions = yearlyTransactions.filter {
+                cal.timeInMillis = it.date
+                cal.get(java.util.Calendar.MONTH) == month
+            }
+            val mIncome = monthTransactions.filter { it.type == "income" }.sumOf { it.amount }.toFloat()
+            val mExpense = monthTransactions.filter { it.type == "expense" }.sumOf { it.amount }.toFloat()
+
+            incomeEntries.add(BarEntry(month.toFloat(), mIncome))
+            expenseEntries.add(BarEntry(month.toFloat(), mExpense))
+        }
+
+        val incomeDataSet = BarDataSet(incomeEntries, "Дохід")
+        incomeDataSet.color = Color.parseColor("#4CAF50")
+
+        val expenseDataSet = BarDataSet(expenseEntries, "Витрата")
+        expenseDataSet.color = Color.parseColor("#F44336")
+
+        val data = BarData(incomeDataSet, expenseDataSet)
+        val barSpace = 0.05f
+        val groupSpace = 0.30f
+        data.barWidth = 0.30f
+
+        yearlyBarChart.data = data
+        yearlyBarChart.xAxis.valueFormatter = IndexAxisValueFormatter(monthNames)
+        yearlyBarChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
+        yearlyBarChart.xAxis.setDrawGridLines(false)
+        yearlyBarChart.xAxis.axisMinimum = -0.5f // щоб перший стовпець не обрізався
+        yearlyBarChart.xAxis.axisMaximum = 12f
+        yearlyBarChart.axisRight.isEnabled = false
+        yearlyBarChart.description.isEnabled = false
+        yearlyBarChart.setDrawGridBackground(false)
+
+        yearlyBarChart.groupBars(-0.5f, groupSpace, barSpace)
+        yearlyBarChart.invalidate()
+        yearlyBarChart.animateY(1000)
     }
 
     private fun buildTrendIndicator(transactions: List<Transaction>) {

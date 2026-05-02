@@ -70,6 +70,9 @@ class MainActivity : AppCompatActivity() {
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
 
+    // Карта для збереження прорахованого балансу на кінець кожного дня
+    private var dailyBalancesMap = mapOf<String, Double>()
+
     private val animatedIcons = listOf(
         R.drawable.icon_anim_1,
         R.drawable.icon_anim_2,
@@ -216,12 +219,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTypeFilterDialog() {
         val options = arrayOf("Всі", "Витрати", "Доходи")
-        val checkedItem = when(currentTypeFilter) { "expense" -> 1; "income" -> 2; else -> 0 }
+        val checkedItem = when (currentTypeFilter) {
+            "expense" -> 1; "income" -> 2; else -> 0
+        }
 
         AlertDialog.Builder(this)
             .setTitle("Оберіть тип")
             .setSingleChoiceItems(options, checkedItem) { dialog, which ->
-                currentTypeFilter = when(which) { 1 -> "expense"; 2 -> "income"; else -> "all" }
+                currentTypeFilter = when (which) {
+                    1 -> "expense"; 2 -> "income"; else -> "all"
+                }
                 btnFilterType.text = "Тип: ${options[which]}"
                 applyFiltersAndSort()
                 dialog.dismiss()
@@ -232,7 +239,9 @@ class MainActivity : AppCompatActivity() {
         val categories = currentTransactions.map { it.category }.distinct().sorted().toMutableList()
         categories.add(0, "Всі")
         val options = categories.toTypedArray()
-        val checkedItem = if (currentCategoryFilter == "all") 0 else options.indexOf(currentCategoryFilter).takeIf { it != -1 } ?: 0
+        val checkedItem =
+            if (currentCategoryFilter == "all") 0 else options.indexOf(currentCategoryFilter)
+                .takeIf { it != -1 } ?: 0
 
         AlertDialog.Builder(this)
             .setTitle("Оберіть категорію")
@@ -259,19 +268,20 @@ class MainActivity : AppCompatActivity() {
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
-            val selectedCalendar = Calendar.getInstance().apply {
-                set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            currentSpecificDateFilter = selectedCalendar.timeInMillis
+        val datePickerDialog =
+            DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+                val selectedCalendar = Calendar.getInstance().apply {
+                    set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                currentSpecificDateFilter = selectedCalendar.timeInMillis
 
-            val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-            btnFilterSpecificDate.text = "Дата: ${sdf.format(selectedCalendar.time)}"
+                val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+                btnFilterSpecificDate.text = "Дата: ${sdf.format(selectedCalendar.time)}"
 
-            currentLimit = 10L
-            loadTransactions()
-        }, year, month, day)
+                currentLimit = 10L
+                loadTransactions()
+            }, year, month, day)
 
         datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
 
@@ -335,34 +345,42 @@ class MainActivity : AppCompatActivity() {
         val colorTransparent = Color.TRANSPARENT
 
         if (currentTypeFilter != "all") {
-            btnFilterType.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorActiveBg)
             btnFilterType.setTextColor(colorActiveText)
         } else {
-            btnFilterType.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorTransparent)
             btnFilterType.setTextColor(colorInactiveText)
         }
 
         if (currentCategoryFilter != "all") {
-            btnFilterCategory.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterCategory.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorActiveBg)
             btnFilterCategory.setTextColor(colorActiveText)
         } else {
-            btnFilterCategory.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterCategory.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorTransparent)
             btnFilterCategory.setTextColor(colorInactiveText)
         }
 
         if (currentSpecificDateFilter != null) {
-            btnFilterSpecificDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnFilterSpecificDate.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorActiveBg)
             btnFilterSpecificDate.setTextColor(colorActiveText)
         } else {
-            btnFilterSpecificDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnFilterSpecificDate.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorTransparent)
             btnFilterSpecificDate.setTextColor(colorInactiveText)
         }
 
         if (currentSortOrder != "desc") {
-            btnSortDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorActiveBg)
+            btnSortDate.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorActiveBg)
             btnSortDate.setTextColor(colorActiveText)
         } else {
-            btnSortDate.backgroundTintList = android.content.res.ColorStateList.valueOf(colorTransparent)
+            btnSortDate.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(colorTransparent)
             btnSortDate.setTextColor(colorInactiveText)
         }
     }
@@ -494,6 +512,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ЗМІНЕНО: тепер ми прораховуємо точну історію балансу з найпершої транзакції
     private fun loadTotalBalance() {
         val currentUser = auth.currentUser ?: return
 
@@ -503,17 +522,40 @@ class MainActivity : AppCompatActivity() {
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
 
+                    val allTrans =
+                        snapshot.documents.mapNotNull { it.toObject(Transaction::class.java) }
+
+                    // Сортуємо ВСІ транзакції від найстарішої до найновішої, щоб правильно рахувати прогрес балансу
+                    val sortedTrans = allTrans.sortedBy { it.date }
+
                     var totalBalance = 0.0
-                    for (doc in snapshot.documents) {
-                        val type = doc.getString("type") ?: "expense"
-                        val amount = doc.getDouble("amount") ?: 0.0
-                        if (type == "income") totalBalance += amount else totalBalance -= amount
+                    val balancesMap = mutableMapOf<String, Double>()
+
+                    val exactDateFormatter =
+                        SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply {
+                            this.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
+                        }
+
+                    for (t in sortedTrans) {
+                        if (t.type == "income") totalBalance += t.amount else totalBalance -= t.amount
+
+                        // Записуємо баланс. Оскільки ми йдемо хронологічно,
+                        // в кінцевому масиві для кожного дня залишиться ОСТАННЄ значення (End of Day balance)
+                        val dateStr = exactDateFormatter.format(Date(t.date))
+                        balancesMap[dateStr] = totalBalance
                     }
 
                     currentTotalBalance = totalBalance
+                    dailyBalancesMap = balancesMap
 
                     if (isBalanceVisible) {
-                        tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+                        tvTotalBalance.text =
+                            String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+                    }
+
+                    // Передаємо правильну історію в адаптер
+                    if (::transactionAdapter.isInitialized) {
+                        transactionAdapter.updateDailyBalances(dailyBalancesMap)
                     }
                 }
     }
@@ -523,7 +565,8 @@ class MainActivity : AppCompatActivity() {
 
         snapshotListener?.remove()
 
-        var query: Query = db.collection("users").document(currentUser.uid).collection("transactions")
+        var query: Query =
+            db.collection("users").document(currentUser.uid).collection("transactions")
 
         if (currentSpecificDateFilter != null) {
             val startOfDay = currentSpecificDateFilter!!

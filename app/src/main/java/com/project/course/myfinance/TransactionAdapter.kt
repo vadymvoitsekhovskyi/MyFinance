@@ -23,10 +23,14 @@ class TransactionAdapter(
 
     val selectedIds = mutableSetOf<String>()
 
+    // Сюди ми будемо передавати заздалегідь прораховані баланси на кінець кожного дня
+    private var dailyBalances: Map<String, Double> = emptyMap()
+
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvYearHeader: TextView = itemView.findViewById(R.id.tvYearHeader)
         val layoutDateHeader: LinearLayout = itemView.findViewById(R.id.layoutDateHeader)
         val tvDateHeader: TextView = itemView.findViewById(R.id.tvDateHeader)
+        val tvHistoricalBalance: TextView = itemView.findViewById(R.id.tvHistoricalBalance)
         val tvDateSum: TextView = itemView.findViewById(R.id.tvDateSum)
         val tvCategory: TextView = itemView.findViewById(R.id.tvCategory)
         val tvComment: TextView = itemView.findViewById(R.id.tvComment)
@@ -86,6 +90,16 @@ class TransactionAdapter(
             holder.layoutDateHeader.visibility = View.VISIBLE
             holder.tvDateHeader.text = currentDayMonthStr
 
+            // Витягуємо точний історичний баланс для цієї дати
+            val endOfDayBalance = dailyBalances[currentExactDateStr]
+            if (endOfDayBalance != null) {
+                holder.tvHistoricalBalance.visibility = View.VISIBLE
+                holder.tvHistoricalBalance.text =
+                    String.format(Locale.US, "Баланс: %.2f ₴", endOfDayBalance)
+            } else {
+                holder.tvHistoricalBalance.visibility = View.GONE
+            }
+
             var daySum = 0.0
 
             transactions.forEach { t ->
@@ -144,6 +158,12 @@ class TransactionAdapter(
 
     fun updateData(newTransactions: List<Transaction>) {
         transactions = newTransactions
+        notifyDataSetChanged()
+    }
+
+    // Метод для оновлення карти щоденних балансів
+    fun updateDailyBalances(newBalances: Map<String, Double>) {
+        dailyBalances = newBalances
         notifyDataSetChanged()
     }
 
