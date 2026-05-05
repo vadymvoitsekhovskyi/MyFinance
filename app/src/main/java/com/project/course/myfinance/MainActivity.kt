@@ -57,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivBalanceLogo: ImageView
     private var currentTransactions: List<Transaction> = emptyList()
     private var currentLimit: Long = 30L
+    private var isAllLoaded = false
+    private var isScrollDownRequested = false
     private var snapshotListener: ListenerRegistration? = null
     private var balanceListener: ListenerRegistration? = null
     private var currentTypeFilter = "all"
@@ -143,13 +145,18 @@ class MainActivity : AppCompatActivity() {
 
         fabScrollUp.setOnClickListener {
             rvTransactions.smoothScrollToPosition(0)
+
+            if (isAllLoaded) {
+                isAllLoaded = false
+                currentLimit = 10L
+                loadTransactions()
+            }
         }
 
         fabScrollDown.setOnClickListener {
-            val count = transactionAdapter.itemCount
-            if (count > 0) {
-                rvTransactions.smoothScrollToPosition(count - 1)
-            }
+            isScrollDownRequested = true
+            isAllLoaded = true
+            loadTransactions()
         }
 
         transactionAdapter = TransactionAdapter(emptyList(), onItemClick = { transaction ->
@@ -180,8 +187,10 @@ class MainActivity : AppCompatActivity() {
                 super.onScrollStateChanged(recyclerView, newState)
 
                 if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    currentLimit += 10L
-                    loadTransactions()
+                    if (!isAllLoaded) {
+                        currentLimit += 10L
+                        loadTransactions()
+                    }
                 }
             }
         })
@@ -570,8 +579,10 @@ class MainActivity : AppCompatActivity() {
                 .whereLessThanOrEqualTo("date", endOfDay)
         }
 
-        snapshotListener = query.orderBy("date", Query.Direction.DESCENDING).limit(currentLimit)
-            .addSnapshotListener { snapshot, error ->
+        val orderedQuery = query.orderBy("date", Query.Direction.DESCENDING)
+        val limitedQuery = if (isAllLoaded) orderedQuery else orderedQuery.limit(currentLimit)
+
+        snapshotListener = limitedQuery.addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Toast.makeText(this, "Помилка завантаження даних", Toast.LENGTH_SHORT)
                         .show()
@@ -590,6 +601,16 @@ class MainActivity : AppCompatActivity() {
 
                     currentTransactions = transactionsList
                     applyFiltersAndSort()
+
+                    if (isScrollDownRequested) {
+                        isScrollDownRequested = false
+                        val lastIndex = transactionAdapter.itemCount - 1
+                        if (lastIndex >= 0) {
+                            rvTransactions.post {
+                                rvTransactions.smoothScrollToPosition(lastIndex)
+                            }
+                        }
+                    }
 
                     val validSelectedIds =
                         transactionAdapter.selectedIds.filter { id -> transactionsList.any { it.id == id } }
