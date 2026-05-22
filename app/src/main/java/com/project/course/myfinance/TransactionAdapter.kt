@@ -29,7 +29,8 @@ class TransactionAdapter(
         val layoutDateHeader: LinearLayout = itemView.findViewById(R.id.layoutDateHeader)
         val tvDateHeader: TextView = itemView.findViewById(R.id.tvDateHeader)
         val tvHistoricalBalance: TextView = itemView.findViewById(R.id.tvHistoricalBalance)
-        val tvDateSum: TextView = itemView.findViewById(R.id.tvDateSum)
+        val tvDateIncome: TextView = itemView.findViewById(R.id.tvDateIncome)
+        val tvDateExpense: TextView = itemView.findViewById(R.id.tvDateExpense)
         val tvCategory: TextView = itemView.findViewById(R.id.tvCategory)
         val tvComment: TextView = itemView.findViewById(R.id.tvComment)
         val tvTime: TextView = itemView.findViewById(R.id.tvTime)
@@ -97,23 +98,31 @@ class TransactionAdapter(
                 holder.tvHistoricalBalance.visibility = View.GONE
             }
 
-            var daySum = 0.0
+            var dayIncome = 0.0
+            var dayExpense = 0.0
 
             transactions.forEach { t ->
                 if (exactDateFormatter.format(Date(t.date)) == currentExactDateStr) {
-                    if (t.type == "income") daySum += t.amount else daySum -= t.amount
+                    if (t.type == "income") {
+                        dayIncome += t.amount
+                    } else {
+                        dayExpense += t.amount
+                    }
                 }
             }
 
-            if (daySum > 0) {
-                holder.tvDateSum.text = String.format(Locale.US, "+ %.2f ₴", daySum)
-                holder.tvDateSum.setTextColor(Color.parseColor("#4CAF50"))
-            } else if (daySum < 0) {
-                holder.tvDateSum.text = String.format(Locale.US, "- %.2f ₴", abs(daySum))
-                holder.tvDateSum.setTextColor(Color.parseColor("#F44336"))
+            if (dayIncome > 0) {
+                holder.tvDateIncome.text = String.format(Locale.US, "+ %.2f ₴", dayIncome)
+                holder.tvDateIncome.visibility = View.VISIBLE
             } else {
-                holder.tvDateSum.text = "0.00 ₴"
-                holder.tvDateSum.setTextColor(Color.parseColor("#757575"))
+                holder.tvDateIncome.visibility = View.GONE
+            }
+
+            if (dayExpense > 0) {
+                holder.tvDateExpense.text = String.format(Locale.US, "- %.2f ₴", dayExpense)
+                holder.tvDateExpense.visibility = View.VISIBLE
+            } else {
+                holder.tvDateExpense.visibility = View.GONE
             }
         }
 

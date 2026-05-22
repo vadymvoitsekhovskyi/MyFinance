@@ -32,7 +32,10 @@ import kotlin.math.abs
 class StatisticsActivity : AppCompatActivity() {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
-    private lateinit var pieChart: PieChart
+    private lateinit var incomePieChart: PieChart
+    private lateinit var expensePieChart: PieChart
+    private lateinit var cardIncomePie: CardView
+    private lateinit var cardExpensePie: CardView
     private lateinit var barChart: BarChart
     private lateinit var progressBar: ProgressBar
     private lateinit var cardTrend: CardView
@@ -46,7 +49,10 @@ class StatisticsActivity : AppCompatActivity() {
 
         findViewById<ImageView>(R.id.btnBack).setOnClickListener { finish() }
 
-        pieChart = findViewById(R.id.pieChart)
+        incomePieChart = findViewById(R.id.incomePieChart)
+        expensePieChart = findViewById(R.id.expensePieChart)
+        cardIncomePie = findViewById(R.id.cardIncomePie)
+        cardExpensePie = findViewById(R.id.cardExpensePie)
         barChart = findViewById(R.id.barChart)
         progressBar = findViewById(R.id.progressBar)
         cardTrend = findViewById(R.id.cardTrend)
@@ -59,12 +65,15 @@ class StatisticsActivity : AppCompatActivity() {
     }
 
     private fun setupCharts() {
-        pieChart.description.isEnabled = false
-        pieChart.isDrawHoleEnabled = true
-        pieChart.setHoleColor(Color.TRANSPARENT)
-        pieChart.setEntryLabelColor(Color.BLACK)
-        pieChart.setEntryLabelTextSize(12f)
-        pieChart.legend.isWordWrapEnabled = true
+        val pieCharts = listOf(incomePieChart, expensePieChart)
+        pieCharts.forEach { chart ->
+            chart.description.isEnabled = false
+            chart.isDrawHoleEnabled = true
+            chart.setHoleColor(Color.TRANSPARENT)
+            chart.legend.isWordWrapEnabled = true
+            chart.setDrawEntryLabels(false)
+            chart.setExtraOffsets(20f, 0f, 20f, 0f)
+        }
 
         barChart.description.isEnabled = false
         barChart.setDrawGridBackground(false)
@@ -91,7 +100,8 @@ class StatisticsActivity : AppCompatActivity() {
                 }
 
                 buildTrendIndicator(transactions)
-                buildPieChart(transactions)
+                buildPieChart(transactions, "income", incomePieChart, cardIncomePie)
+                buildPieChart(transactions, "expense", expensePieChart, cardExpensePie)
                 buildBarChart(transactions)
                 buildYearlyBarChart(transactions)
             }
@@ -178,12 +188,19 @@ class StatisticsActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildPieChart(transactions: List<Transaction>) {
-        val expenses = transactions.filter { it.type == "expense" }
+    private fun buildPieChart(transactions: List<Transaction>, type: String, chart: PieChart, cardView: CardView) {
+        val filtered = transactions.filter { it.type == type }
 
-        val groupedByCategory = expenses.groupBy { it.category }
+        val groupedByCategory = filtered.groupBy { it.category }
             .mapValues { entry -> entry.value.sumOf { it.amount } }
             .filter { it.value > 0 }
+
+        if (groupedByCategory.isEmpty()) {
+            cardView.visibility = View.GONE
+            return
+        } else {
+            cardView.visibility = View.VISIBLE
+        }
 
         val entries = ArrayList<PieEntry>()
         for ((category, amount) in groupedByCategory) {
@@ -198,17 +215,25 @@ class StatisticsActivity : AppCompatActivity() {
         colors.addAll(ColorTemplate.COLORFUL_COLORS.toList())
         colors.addAll(ColorTemplate.LIBERTY_COLORS.toList())
         colors.addAll(ColorTemplate.PASTEL_COLORS.toList())
+
+        if (type == "income") colors.shuffle()
+
         dataSet.colors = colors
         dataSet.sliceSpace = 3f
         dataSet.selectionShift = 5f
+        dataSet.yValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
+        dataSet.valueLinePart1OffsetPercentage = 80f
+        dataSet.valueLinePart1Length = 0.4f
+        dataSet.valueLinePart2Length = 0.4f
+        dataSet.valueLineColor = Color.BLACK
 
         val data = PieData(dataSet)
-        data.setValueTextSize(14f)
-        data.setValueTextColor(Color.WHITE)
+        data.setValueTextSize(12f)
+        data.setValueTextColor(Color.BLACK)
 
-        pieChart.data = data
-        pieChart.invalidate()
-        pieChart.animateY(1000)
+        chart.data = data
+        chart.invalidate()
+        chart.animateY(1000)
     }
 
     private fun buildBarChart(transactions: List<Transaction>) {
