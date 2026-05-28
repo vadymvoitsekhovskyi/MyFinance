@@ -23,7 +23,7 @@
         android:layout_marginTop="16dp"
         android:text="MyFinance"
         android:textColor="@color/primary_green"
-        android:textSize="36sp"
+        android:textSize="40sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

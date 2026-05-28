@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
     private var dailyBalancesMap = mapOf<String, Double>()
+    private var currentSearchQuery: String = ""
 
     private val animatedIcons = listOf(
         R.drawable.icon_anim_1,
@@ -122,6 +123,17 @@ class MainActivity : AppCompatActivity() {
         btnFilterCategory = findViewById(R.id.btnFilterCategory)
         btnFilterSpecificDate = findViewById(R.id.btnFilterSpecificDate)
         btnSortDate = findViewById(R.id.btnSortDate)
+
+        val etSearch = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSearch)
+
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                currentSearchQuery = s?.toString()?.trim() ?: ""
+                applyFiltersAndSort()
+            }
+        })
 
         tvTotalBalance.text = "••••• ₴"
 
@@ -328,6 +340,15 @@ class MainActivity : AppCompatActivity() {
 
         if (currentCategoryFilter != "all") {
             result = result.filter { it.category == currentCategoryFilter }
+        }
+
+        if (currentSearchQuery.isNotBlank()) {
+            val query = currentSearchQuery.lowercase()
+            result = result.filter { transaction ->
+                transaction.category.lowercase().contains(query) ||
+                        transaction.comment.lowercase().contains(query) ||
+                        transaction.amount.toString().contains(query)
+            }
         }
 
         result = if (currentSortOrder == "desc") {
@@ -715,5 +736,21 @@ class MainActivity : AppCompatActivity() {
         }.addOnFailureListener { e ->
             Toast.makeText(this, "Помилка видалення: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+            val currentFocus = currentFocus
+            if (currentFocus is com.google.android.material.textfield.TextInputEditText) {
+                val outRect = android.graphics.Rect()
+                currentFocus.getGlobalVisibleRect(outRect)
+                if (!outRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                    currentFocus.clearFocus()
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.hideSoftInputFromWindow(currentFocus.windowToken, 0)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
     }
 }

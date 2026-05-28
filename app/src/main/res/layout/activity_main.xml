@@ -192,6 +192,31 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cardBalance" />
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilSearch"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:startIconTint="@color/primary_green"
+        app:hintEnabled="true"
+        android:hint="Пошук за категорією, коментарем або сумою"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvHistoryLabel">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:maxLines="1"
+            android:imeOptions="actionSearch" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
     <HorizontalScrollView
         android:id="@+id/filterScroll"
         android:layout_width="match_parent"
@@ -200,7 +225,7 @@
         android:scrollbars="none"
         android:clipToPadding="false"
         android:paddingHorizontal="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvHistoryLabel">
+        app:layout_constraintTop_toBottomOf="@id/tilSearch">
 
         <LinearLayout
             android:layout_width="wrap_content"
