@@ -23,6 +23,7 @@ class TransactionAdapter(
 
     val selectedIds = mutableSetOf<String>()
     private var dailyBalances: Map<String, Double> = emptyMap()
+    private var dailyExpenses: Map<String, Double> = emptyMap()
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvYearHeader: TextView = itemView.findViewById(R.id.tvYearHeader)
@@ -92,31 +93,14 @@ class TransactionAdapter(
             val endOfDayBalance = dailyBalances[currentExactDateStr]
             if (endOfDayBalance != null) {
                 holder.tvHistoricalBalance.visibility = View.VISIBLE
-                holder.tvHistoricalBalance.text =
-                    String.format(Locale.US, "Баланс: %.2f ₴", endOfDayBalance)
+                holder.tvHistoricalBalance.text = String.format(Locale.US, "Баланс: %.2f ₴", endOfDayBalance)
             } else {
                 holder.tvHistoricalBalance.visibility = View.GONE
             }
 
-            var dayIncome = 0.0
-            var dayExpense = 0.0
+            holder.tvDateIncome.visibility = View.GONE
 
-            transactions.forEach { t ->
-                if (exactDateFormatter.format(Date(t.date)) == currentExactDateStr) {
-                    if (t.type == "income") {
-                        dayIncome += t.amount
-                    } else {
-                        dayExpense += t.amount
-                    }
-                }
-            }
-
-            if (dayIncome > 0) {
-                holder.tvDateIncome.text = String.format(Locale.US, "+ %.2f ₴", dayIncome)
-                holder.tvDateIncome.visibility = View.VISIBLE
-            } else {
-                holder.tvDateIncome.visibility = View.GONE
-            }
+            val dayExpense = dailyExpenses[currentExactDateStr] ?: 0.0
 
             if (dayExpense > 0) {
                 holder.tvDateExpense.text = String.format(Locale.US, "- %.2f ₴", dayExpense)
@@ -167,8 +151,9 @@ class TransactionAdapter(
         notifyDataSetChanged()
     }
 
-    fun updateDailyBalances(newBalances: Map<String, Double>) {
+    fun updateDailyStats(newBalances: Map<String, Double>, newExpenses: Map<String, Double>) {
         dailyBalances = newBalances
+        dailyExpenses = newExpenses
         notifyDataSetChanged()
     }
 

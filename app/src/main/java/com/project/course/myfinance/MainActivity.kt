@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private var isBalanceVisible = false
     private var currentTotalBalance = 0.0
     private var dailyBalancesMap = mapOf<String, Double>()
+    private var dailyExpensesMap = mapOf<String, Double>()
     private var currentSearchQuery: String = ""
 
     private val animatedIcons = listOf(
@@ -547,42 +548,46 @@ class MainActivity : AppCompatActivity() {
         val currentUser = auth.currentUser ?: return
 
         balanceListener?.remove()
-        balanceListener =
-            db.collection("users").document(currentUser.uid).collection("transactions")
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null || snapshot == null) return@addSnapshotListener
+        balanceListener = db.collection("users").document(currentUser.uid).collection("transactions")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
 
-                    val allTrans =
-                        snapshot.documents.mapNotNull { it.toObject(Transaction::class.java) }
+                val allTrans = snapshot.documents.mapNotNull { it.toObject(Transaction::class.java) }
+                val sortedTrans = allTrans.sortedBy { it.date }
 
-                    val sortedTrans = allTrans.sortedBy { it.date }
-                    var totalBalance = 0.0
-                    val balancesMap = mutableMapOf<String, Double>()
+                var totalBalance = 0.0
+                val balancesMap = mutableMapOf<String, Double>()
+                val expensesMap = mutableMapOf<String, Double>()
 
-                    val exactDateFormatter =
-                        SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply {
-                            this.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
-                        }
-
-                    for (t in sortedTrans) {
-                        if (t.type == "income") totalBalance += t.amount else totalBalance -= t.amount
-
-                        val dateStr = exactDateFormatter.format(Date(t.date))
-                        balancesMap[dateStr] = totalBalance
-                    }
-
-                    currentTotalBalance = totalBalance
-                    dailyBalancesMap = balancesMap
-
-                    if (isBalanceVisible) {
-                        tvTotalBalance.text =
-                            String.format(Locale.US, "%.2f ₴", currentTotalBalance)
-                    }
-
-                    if (::transactionAdapter.isInitialized) {
-                        transactionAdapter.updateDailyBalances(dailyBalancesMap)
-                    }
+                val exactDateFormatter = SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply {
+                    this.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
                 }
+
+                for (t in sortedTrans) {
+                    val dateStr = exactDateFormatter.format(Date(t.date))
+
+                    if (t.type == "income") {
+                        totalBalance += t.amount
+                    } else {
+                        totalBalance -= t.amount
+                        expensesMap[dateStr] = (expensesMap[dateStr] ?: 0.0) + t.amount
+                    }
+
+                    balancesMap[dateStr] = totalBalance
+                }
+
+                currentTotalBalance = totalBalance
+                dailyBalancesMap = balancesMap
+                dailyExpensesMap = expensesMap
+
+                if (isBalanceVisible) {
+                    tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
+                }
+
+                if (::transactionAdapter.isInitialized) {
+                    transactionAdapter.updateDailyStats(dailyBalancesMap, dailyExpensesMap)
+                }
+            }
     }
 
     private fun loadTransactions() {
