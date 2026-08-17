@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
         btnResetFilters = findViewById(R.id.btnResetFilters)
         btnResetFilters.setOnClickListener { resetFilters() }
 
+
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
         val layoutBalanceText = findViewById<LinearLayout>(R.id.layoutBalanceText)
         val btnCloseSelection = findViewById<ImageView>(R.id.btnCloseSelection)
