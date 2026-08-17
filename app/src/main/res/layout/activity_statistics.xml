@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="Статистика"
-            android:textSize="20sp"
+            android:textSize="24sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -78,7 +78,7 @@
                             android:id="@+id/ivTrendArrow"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:src="@android:drawable/arrow_up_float"
+                            android:src="@drawable/ic_arrow_up_flat"
                             app:tint="#4CAF50" />
 
                         <TextView
@@ -119,7 +119,7 @@
                     <com.github.mikephil.charting.charts.PieChart
                         android:id="@+id/incomePieChart"
                         android:layout_width="match_parent"
-                        android:layout_height="350dp"
+                        android:layout_height="400dp"
                         android:layout_marginTop="16dp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -149,7 +149,7 @@
                     <com.github.mikephil.charting.charts.PieChart
                         android:id="@+id/expensePieChart"
                         android:layout_width="match_parent"
-                        android:layout_height="350dp"
+                        android:layout_height="400dp"
                         android:layout_marginTop="16dp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

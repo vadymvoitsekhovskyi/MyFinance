@@ -72,7 +72,7 @@ class StatisticsActivity : AppCompatActivity() {
             chart.setHoleColor(Color.TRANSPARENT)
             chart.legend.isWordWrapEnabled = true
             chart.setDrawEntryLabels(false)
-            chart.setExtraOffsets(20f, 0f, 20f, 0f)
+            chart.setExtraOffsets(10f, 0f, 10f, 0f)
         }
 
         barChart.description.isEnabled = false
@@ -178,11 +178,13 @@ class StatisticsActivity : AppCompatActivity() {
         val difference = recentIncome - recentExpense
 
         if (difference >= 0) {
-            ivTrendArrow.setImageResource(android.R.drawable.arrow_up_float)
+            // Змінюємо ТУТ
+            ivTrendArrow.setImageResource(R.drawable.ic_arrow_up_flat)
             ivTrendArrow.setColorFilter(Color.parseColor("#4CAF50"))
             tvTrendText.text = String.format(Locale.US, "Чудово! Ваші доходи перевищують витрати на %.2f ₴.", difference)
         } else {
-            ivTrendArrow.setImageResource(android.R.drawable.arrow_down_float)
+            // І Змінюємо ТУТ
+            ivTrendArrow.setImageResource(R.drawable.ic_arrow_down_flat)
             ivTrendArrow.setColorFilter(Color.parseColor("#F44336"))
             tvTrendText.text = String.format(Locale.US, "Увага! Ваші витрати перевищують доходи на %.2f ₴.", abs(difference))
         }
