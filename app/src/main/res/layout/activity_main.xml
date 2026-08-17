@@ -192,6 +192,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cardBalance" />
 
+    <ImageView
+        android:id="@+id/btnResetFilters"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_popup_sync"
+        app:tint="@color/primary_green"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/tvHistoryLabel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tvHistoryLabel" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilSearch"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"

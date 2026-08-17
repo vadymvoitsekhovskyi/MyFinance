@@ -43,6 +43,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var btnResetFilters: ImageView
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private lateinit var transactionAdapter: TransactionAdapter
@@ -73,6 +74,7 @@ class MainActivity : AppCompatActivity() {
     private var currentTotalBalance = 0.0
     private var dailyBalancesMap = mapOf<String, Double>()
     private var dailyExpensesMap = mapOf<String, Double>()
+    private var dailyIncomesMap = mapOf<String, Double>()
     private var currentSearchQuery: String = ""
 
     private val animatedIcons = listOf(
@@ -113,6 +115,8 @@ class MainActivity : AppCompatActivity() {
         tvProfileLetter = findViewById(R.id.tvProfileLetter)
         ivProfile = findViewById(R.id.ivProfile)
         ivBalanceLogo = findViewById(R.id.ivBalanceLogo)
+        btnResetFilters = findViewById(R.id.btnResetFilters)
+        btnResetFilters.setOnClickListener { resetFilters() }
 
         val cvProfile = findViewById<CardView>(R.id.cvProfile)
         val layoutBalanceText = findViewById<LinearLayout>(R.id.layoutBalanceText)
@@ -213,10 +217,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnCloseSelection.setOnClickListener { clearSelection() }
+
         btnSelectAll.setOnClickListener {
             transactionAdapter.selectAll()
             updateSelectionUI()
         }
+
         btnDeleteSelected.setOnClickListener {
             showDeleteConfirmationDialog(transactionAdapter.selectedIds.toList())
         }
@@ -368,6 +374,33 @@ class MainActivity : AppCompatActivity() {
             rvTransactions.visibility = View.VISIBLE
             tvEmptyState.visibility = View.GONE
         }
+
+        val hasFilters = currentTypeFilter != "all" ||
+                currentCategoryFilter != "all" ||
+                currentSpecificDateFilter != null ||
+                currentSearchQuery.isNotBlank()
+
+        btnResetFilters.visibility = if (hasFilters) View.VISIBLE else View.GONE
+    }
+
+    private fun resetFilters() {
+        // Скидаємо змінні
+        currentTypeFilter = "all"
+        currentCategoryFilter = "all"
+        currentSpecificDateFilter = null
+        currentSearchQuery = ""
+
+        // Оновлюємо UI (текст кнопок та поле пошуку)
+        findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSearch).setText("")
+        btnFilterType.text = "Тип: Всі"
+        btnFilterCategory.text = "Категорія: Всі"
+        btnFilterSpecificDate.text = "Дата: Всі"
+        // Сортування (currentSortOrder) зазвичай залишають як було, але за бажанням можеш скинути і його
+
+        // Запускаємо завантаження без фільтрів
+        currentLimit = 30L // або 10L, як у тебе за замовчуванням
+        isAllLoaded = false
+        loadTransactions()
     }
 
     private fun updateFilterButtonsStyle() {
@@ -558,6 +591,7 @@ class MainActivity : AppCompatActivity() {
                 var totalBalance = 0.0
                 val balancesMap = mutableMapOf<String, Double>()
                 val expensesMap = mutableMapOf<String, Double>()
+                val incomesMap = mutableMapOf<String, Double>()
 
                 val exactDateFormatter = SimpleDateFormat("ddMMyyyy", Locale.getDefault()).apply {
                     this.timeZone = TimeZone.getTimeZone("Europe/Kyiv")
@@ -568,6 +602,7 @@ class MainActivity : AppCompatActivity() {
 
                     if (t.type == "income") {
                         totalBalance += t.amount
+                        incomesMap[dateStr] = (incomesMap[dateStr] ?: 0.0) + t.amount // ДОДАТИ
                     } else {
                         totalBalance -= t.amount
                         expensesMap[dateStr] = (expensesMap[dateStr] ?: 0.0) + t.amount
@@ -579,13 +614,15 @@ class MainActivity : AppCompatActivity() {
                 currentTotalBalance = totalBalance
                 dailyBalancesMap = balancesMap
                 dailyExpensesMap = expensesMap
+                dailyIncomesMap = incomesMap
 
                 if (isBalanceVisible) {
                     tvTotalBalance.text = String.format(Locale.US, "%.2f ₴", currentTotalBalance)
                 }
 
                 if (::transactionAdapter.isInitialized) {
-                    transactionAdapter.updateDailyStats(dailyBalancesMap, dailyExpensesMap)
+                    // Змінюємо виклик функції, передаючи ще й доходи
+                    transactionAdapter.updateDailyStats(dailyBalancesMap, dailyExpensesMap, dailyIncomesMap)
                 }
             }
     }

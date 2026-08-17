@@ -24,6 +24,7 @@ class TransactionAdapter(
     val selectedIds = mutableSetOf<String>()
     private var dailyBalances: Map<String, Double> = emptyMap()
     private var dailyExpenses: Map<String, Double> = emptyMap()
+    private var dailyIncomes: Map<String, Double> = emptyMap()
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvYearHeader: TextView = itemView.findViewById(R.id.tvYearHeader)
@@ -98,16 +99,17 @@ class TransactionAdapter(
                 holder.tvHistoricalBalance.visibility = View.GONE
             }
 
-            holder.tvDateIncome.visibility = View.GONE
-
+            // ЗМІНЕНО: дістаємо суми (якщо їх немає за цей день, буде 0.0)
+            val dayIncome = dailyIncomes[currentExactDateStr] ?: 0.0
             val dayExpense = dailyExpenses[currentExactDateStr] ?: 0.0
 
-            if (dayExpense > 0) {
-                holder.tvDateExpense.text = String.format(Locale.US, "- %.2f ₴", dayExpense)
-                holder.tvDateExpense.visibility = View.VISIBLE
-            } else {
-                holder.tvDateExpense.visibility = View.GONE
-            }
+            // Завжди показуємо доходи
+            holder.tvDateIncome.text = String.format(Locale.US, "+ %.2f ₴", dayIncome)
+            holder.tvDateIncome.visibility = View.VISIBLE
+
+            // Завжди показуємо витрати
+            holder.tvDateExpense.text = String.format(Locale.US, "- %.2f ₴", dayExpense)
+            holder.tvDateExpense.visibility = View.VISIBLE
         }
 
         holder.tvCategory.text = transaction.category
@@ -151,9 +153,14 @@ class TransactionAdapter(
         notifyDataSetChanged()
     }
 
-    fun updateDailyStats(newBalances: Map<String, Double>, newExpenses: Map<String, Double>) {
+    fun updateDailyStats(
+        newBalances: Map<String, Double>,
+        newExpenses: Map<String, Double>,
+        newIncomes: Map<String, Double> // ДОДАТИ
+    ) {
         dailyBalances = newBalances
         dailyExpenses = newExpenses
+        dailyIncomes = newIncomes
         notifyDataSetChanged()
     }
 
