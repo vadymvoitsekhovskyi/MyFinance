@@ -27,8 +27,9 @@ class AddTransactionActivity : AppCompatActivity() {
     private var originalDate: Long = 0L
 
     private val categories = arrayOf(
-        "Продукти", "Транспорт", "Спорт", "Техніка", "Дім",
-        "Здоров'я", "Одяг", "Кафе/Ресторани", "Зарплата", "Подарунки", "Інше"
+        "Надходження", "Кава", "Продукти", "Дім", "Транспорт",
+        "Аптека", "Спорт", "Техніка", "Одяг", "Кафе/Ресторани",
+        "Подарунки", "Інше"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

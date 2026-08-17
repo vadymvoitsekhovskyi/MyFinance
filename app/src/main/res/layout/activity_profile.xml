@@ -44,7 +44,7 @@
         android:foreground="?android:attr/selectableItemBackground"
         app:cardBackgroundColor="@color/primary_green"
         app:cardCornerRadius="200dp"
-        app:cardElevation="4dp"
+        app:cardElevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar">
@@ -143,7 +143,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:text="Змінити ім'я" />
+                    android:text="Змінити ім'я"
+                    app:cornerRadius="50dp" />
 
                 <Button
                     android:id="@+id/btnChangeEmail"
@@ -151,14 +152,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
-                    android:text="Змінити email" />
+                    android:text="Змінити email"
+                    app:cornerRadius="50dp" />
 
                 <Button
                     android:id="@+id/btnChangePassword"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Змінити пароль" />
+                    android:text="Змінити пароль"
+                    app:cornerRadius="50dp" />
             </LinearLayout>
 
             <LinearLayout
@@ -178,7 +181,8 @@
                     android:textColor="#4CAF50"
                     app:icon="@android:drawable/ic_menu_save"
                     app:iconTint="#4CAF50"
-                    app:strokeColor="#4CAF50" />
+                    app:strokeColor="#4CAF50"
+                    app:cornerRadius="50dp" />
 
                 <Button
                     android:id="@+id/btnImportData"
@@ -189,7 +193,8 @@
                     android:textColor="#FF9800"
                     app:icon="@android:drawable/ic_menu_upload"
                     app:iconTint="#FF9800"
-                    app:strokeColor="#FF9800" />
+                    app:strokeColor="#FF9800"
+                    app:cornerRadius="50dp" />
             </LinearLayout>
 
             <LinearLayout
@@ -205,7 +210,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:backgroundTint="#757575"
-                    android:text="Вийти з акаунта" />
+                    android:text="Вийти з акаунта"
+                    app:cornerRadius="50dp" />
 
                 <Button
                     android:id="@+id/btnDeleteAccount"
@@ -213,7 +219,8 @@
                     android:layout_height="wrap_content"
                     android:backgroundTint="#F44336"
                     android:text="Видалити акаунт"
-                    android:textColor="#FFFFFF" />
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="50dp" />
             </LinearLayout>
 
         </FrameLayout>

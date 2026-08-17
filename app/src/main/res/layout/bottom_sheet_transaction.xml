@@ -138,7 +138,8 @@
             android:layout_weight="1"
             android:text="Редагувати"
             android:textColor="@color/primary_green"
-            app:strokeColor="@color/primary_green" />
+            app:strokeColor="@color/primary_green"
+            app:cornerRadius="50dp" />
 
         <Button
             android:id="@+id/btnDelete"
@@ -148,7 +149,8 @@
             android:layout_weight="1"
             android:backgroundTint="#F44336"
             android:text="Видалити"
-            android:textColor="#FFFFFF" />
+            android:textColor="#FFFFFF"
+            app:cornerRadius="50dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
