@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import android.graphics.drawable.Drawable
+import android.widget.ImageButton
 import androidx.vectordrawable.graphics.drawable.Animatable2Compat
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -101,10 +102,10 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val fabAddTransaction = findViewById<FloatingActionButton>(R.id.fabAddTransaction)
-        val scrollButtonsContainer = findViewById<LinearLayout>(R.id.scrollButtonsContainer)
-        val fabScrollUp = findViewById<FloatingActionButton>(R.id.fabScrollUp)
-        val fabScrollDown = findViewById<FloatingActionButton>(R.id.fabScrollDown)
+        // Ініціалізація нових кнопок нашої Glossy-панелі
+        val btnAddTransaction = findViewById<ImageButton>(R.id.btnAddTransaction)
+        val btnScrollUp = findViewById<ImageButton>(R.id.btnScrollUp)
+        val btnScrollDown = findViewById<ImageButton>(R.id.btnScrollDown)
 
         tvTotalBalance = findViewById(R.id.tvTotalBalance)
         rvTransactions = findViewById(R.id.rvTransactions)
@@ -161,8 +162,9 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, StatisticsActivity::class.java))
         }
 
-        fabScrollUp.setOnClickListener {
-            rvTransactions.smoothScrollToPosition(0)
+        // Оновлені лісенери для нових кнопок панелі
+        btnScrollUp.setOnClickListener {
+            rvTransactions.scrollToPosition(0) // Миттєвий скрол вверх
 
             if (isAllLoaded) {
                 isAllLoaded = false
@@ -171,10 +173,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        fabScrollDown.setOnClickListener {
+        btnScrollDown.setOnClickListener {
             isScrollDownRequested = true
             isAllLoaded = true
-            loadTransactions()
+            loadTransactions() // Дані завантажаться, а миттєвий скрол вниз відбудеться вже всередині loadTransactions()
+        }
+
+        btnAddTransaction.setOnClickListener {
+            startActivity(Intent(this, AddTransactionActivity::class.java))
         }
 
         transactionAdapter = TransactionAdapter(emptyList(), onItemClick = { transaction ->
@@ -191,19 +197,8 @@ class MainActivity : AppCompatActivity() {
         rvTransactions.adapter = transactionAdapter
 
         rvTransactions.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-
-                if (recyclerView.computeVerticalScrollOffset() > 0) {
-                    scrollButtonsContainer.visibility = View.VISIBLE
-                } else {
-                    scrollButtonsContainer.visibility = View.GONE
-                }
-            }
-
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-
                 if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
                     if (!isAllLoaded) {
                         currentLimit += 10L
@@ -212,10 +207,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-
-        fabAddTransaction.setOnClickListener {
-            startActivity(Intent(this, AddTransactionActivity::class.java))
-        }
 
         btnCloseSelection.setOnClickListener { clearSelection() }
 
@@ -671,7 +662,8 @@ class MainActivity : AppCompatActivity() {
                         val lastIndex = transactionAdapter.itemCount - 1
                         if (lastIndex >= 0) {
                             rvTransactions.post {
-                                rvTransactions.smoothScrollToPosition(lastIndex)
+                                // Ось тут магія: scrollToPosition замість smoothScrollToPosition
+                                rvTransactions.scrollToPosition(lastIndex)
                             }
                         }
                     }
